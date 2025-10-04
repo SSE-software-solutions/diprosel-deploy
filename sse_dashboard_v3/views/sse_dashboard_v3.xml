@@ -1,0 +1,14 @@
+<odoo>
+    <!-- Acción del Dashboard -->
+    <record id="action_sse_dashboard" model="ir.actions.client">
+        <field name="name">SSE Dashboard</field>
+        <field name="tag">sse.dashboard</field>
+    </record>
+
+    <!-- Menú principal -->
+    <menuitem id="menu_sse_dashboard_root" name="Dashboard SSE" web_icon="sse_dashboard,static/description/icon.png"/>
+
+    <!-- Menú del Dashboard -->
+    <menuitem id="menu_sse_dashboard" name="Indicadores"
+        action="action_sse_dashboard" parent="menu_sse_dashboard_root" groups="base.group_system"/>
+</odoo>

@@ -1,0 +1,46 @@
+<odoo>
+    <!-- Definimos la plantilla del reporte -->
+    <record id="sire_report_template" model="ir.ui.view">
+        <field name="name">sire.report.template</field>
+        <field name="model">sire.registro</field>
+        <field name="arch" type="xml">
+            <t t-name="sire_peru.sire_report">
+                <t t-call="web.external_layout">
+                    <div class="page">
+                        <h2>Reporte de Registros SIRE</h2>
+                        <table class="table table-condensed">
+                            <thead>
+                                <tr>
+                                    <th>Nombre</th>
+                                    <th>Periodo</th>
+                                    <th>Tipo de Libro</th>
+                                    <th>Fecha de Envío</th>
+                                    <th>Estado</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr t-foreach="docs" t-as="registro">
+                                    <td><t t-esc="registro.name"/></td>
+                                    <td><t t-esc="registro.periodo"/></td>
+                                    <td><t t-esc="registro.tipo_libro"/></td>
+                                    <td><t t-esc="registro.fecha_envio"/></td>
+                                    <td><t t-esc="registro.estado"/></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </t>
+        </field>
+    </record>
+
+    <!-- Definimos la acción del reporte -->
+    <record id="sire_report_action" model="ir.actions.report">
+        <field name="name">Reporte SIRE</field>
+        <field name="model">sire.registro</field>
+        <field name="report_type">qweb-pdf</field>
+        <field name="report_name">sire_peru.sire_report</field>
+        <field name="file">Reporte_SIRE</field>
+        <field name="print_report_name">'Reporte_SIRE_' + object.periodo</field>
+    </record>
+</odoo>

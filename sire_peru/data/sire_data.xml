@@ -1,0 +1,15 @@
+<odoo>
+    <record id="sire_registro_1" model="sire.registro">
+        <field name="name">Registro de Ventas Enero 2024</field>
+        <field name="periodo">2024-01</field>
+        <field name="tipo_libro">14.1</field>
+        <field name="estado">borrador</field>
+    </record>
+
+    <record id="sire_registro_2" model="sire.registro">
+        <field name="name">Registro de Compras Febrero 2024</field>
+        <field name="periodo">2024-02</field>
+        <field name="tipo_libro">14.2</field>
+        <field name="estado">borrador</field>
+    </record>
+</odoo>

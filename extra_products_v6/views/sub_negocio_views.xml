@@ -1,0 +1,15 @@
+<odoo>
+    <!-- Acción para Sub Negocio -->
+    <record id="product_sub_business_action" model="ir.actions.act_window">
+        <field name="name">Sub Negocios</field>
+        <field name="res_model">product.sub.business</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menú para Sub Negocio -->
+    <menuitem id="menu_product_sub_business"
+              name="Sub Negocios"
+              parent="stock.menu_stock_inventory_control"
+              action="product_sub_business_action"
+              sequence="70"/>
+</odoo>

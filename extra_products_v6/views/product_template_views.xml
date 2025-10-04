@@ -1,0 +1,34 @@
+<odoo>
+    <record id="view_product_template_form_inherit_characteristics" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.characteristics</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view" />
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='inventory']" position="after">
+                <page string="Características">
+                    <group>
+                        <group>
+                            <!-- Primera columna -->
+                            <field name="negocio" options="{'no_create': False}" />
+                            <field name="sub_negocio" options="{'no_create': False}" />
+                            <field name="familia" />
+                            <field name="categoria_productos"/> <!-- Actualizado -->
+                            <field name="sub_categoria_productos"/> <!-- Actualizado -->
+                            <field name="presentacion" />
+                            <field name="tier" options="{'no_create': False}" />
+                        </group>
+                        <group>
+                            <!-- Segunda columna -->
+                            <field name="condicion_almacenaje" />
+                            <field name="grupo_articulo" />
+                            <field name="conversion_paleta" />
+                            <field name="cama_conversion" />
+                            <field name="unidades_por_nivel" />
+                            <field name="tiempo_vida_dias" />
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

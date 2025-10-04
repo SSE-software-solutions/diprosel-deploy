@@ -1,0 +1,15 @@
+<odoo>
+    <!-- Acción para Familia de Producto -->
+    <record id="product_family_action" model="ir.actions.act_window">
+        <field name="name">Familias de Productos</field>
+        <field name="res_model">product.family</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menú para Familia de Producto -->
+    <menuitem id="menu_product_family"
+              name="Familias de Productos"
+              parent="stock.menu_stock_inventory_control"
+              action="product_family_action"
+              sequence="40"/>
+</odoo>

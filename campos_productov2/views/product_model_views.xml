@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Vista de Formulario para Modelo -->
+    <record id="product_model_view_form" model="ir.ui.view">
+        <field name="name">product.model.form</field>
+        <field name="model">product.model</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <field name="model_image" widget="image" class="oe_avatar"/>
+                    <h1>
+                        <field name="name" string="Nombre del Modelo"/>
+                    </h1>
+                    <group>
+                        <field name="product_count" readonly="1" string="Número de Productos"/>
+                    </group>
+                    <notebook>
+                        <page string="Productos">
+                            <field name="product_ids" widget="many2many"/>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Lista para Modelo -->
+    <record id="product_model_view_list" model="ir.ui.view">
+        <field name="name">product.model.list</field>
+        <field name="model">product.model</field>
+        <field name="arch" type="xml">
+            <list string="Lista de Modelos">
+                <field name="name"/>
+                <field name="product_count"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Acción y Menú para Modelo -->
+    <record id="product_model_action" model="ir.actions.act_window">
+        <field name="name">Modelos</field>
+        <field name="res_model">product.model</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="product_model_menu" 
+              name="Modelos" 
+              parent="stock.menu_stock_inventory_control"
+              action="product_model_action" 
+              sequence="5"/>
+</odoo>

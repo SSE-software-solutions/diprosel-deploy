@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Vista Lista de Períodos de Ventas -->
+    <record id="view_sire_periodo_list" model="ir.ui.view">
+        <field name="name">sire.periodo.list</field>
+        <field name="model">sire.periodo</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="nombre_periodo"/>
+                <field name="anio"/>
+                <field name="mes"/>
+                <field name="estado"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista Formulario de Período de Ventas -->
+    <record id="view_sire_periodo_form" model="ir.ui.view">
+        <field name="name">sire.periodo.form</field>
+        <field name="model">sire.periodo</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="mes"/>
+                        <field name="anio"/>
+                        <field name="nombre_periodo" readonly="1"/>
+                        <field name="estado"/>
+                    </group>
+                    <group>
+                        <button name="generar_registros_ventas"
+                                type="object"
+                                string="Generar Registros"
+                                class="btn btn-primary"/>
+                        <button name="generar_archivo_sire"
+                                type="object"
+                                string="Generar TXT"
+                                class="btn btn-secondary"
+                                invisible="not ventas_ids"/>
+                        <button name="download_sire_txt"
+                                type="object"
+                                string="Descargar TXT"
+                                class="btn btn-success"
+                                invisible="not archivo_sire"/>
+                    </group>
+                    <field name="ventas_ids">
+                        <list>
+                            <field name="fecha_emision"/>
+                            <field name="tipo_comprobante"/>
+                            <field name="tipo_documento_cliente"/>
+                            <field name="numero_documento_cliente"/>
+                            <field name="nombre_cliente"/>
+                            <field name="base_imponible"/>
+                            <field name="igv"/>
+                            <field name="exonerado"/>
+                            <field name="inafecto"/>
+                            <field name="total"/>
+                            <field name="moneda"/>
+                        </list>
+                    </field>
+                    <field name="archivo_sire" filename="archivo_nombre" widget="binary" invisible="not archivo_sire"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para vista de Períodos -->
+    <record id="action_sire_periodo" model="ir.actions.act_window">
+        <field name="name">Períodos de Registro de Ventas</field>
+        <field name="res_model">sire.periodo</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p>
+                Aquí podrás gestionar y generar registros del SIRE para las ventas de cada período.
+            </p>
+        </field>
+    </record>
+
+</odoo>

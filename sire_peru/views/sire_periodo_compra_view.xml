@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <!-- Vista formulario -->
+    <record id="view_sire_periodo_compra_form" model="ir.ui.view">
+        <field name="name">sire.periodo.compra.form</field>
+        <field name="model">sire.periodo.compra</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="mes"/>
+                        <field name="anio"/>
+                        <field name="nombre_periodo" readonly="1"/>
+                        <field name="estado"/>
+                    </group>
+                    <group>
+                        <button name="generar_registros_compras"
+                                type="object"
+                                string="Generar Registros"
+                                class="btn btn-primary"/>
+                        <button name="generar_archivo_sire"
+                                type="object"
+                                string="Generar TXT"
+                                class="btn btn-secondary"
+                                invisible="not compras_ids"/>
+                        <button name="download_sire_txt"
+                                type="object"
+                                string="Descargar TXT"
+                                class="btn btn-success"
+                                invisible="not archivo_sire"/>
+                    </group>
+                    <field name="compras_ids">
+                        <list>
+                            <field name="fecha_emision"/>
+                            <field name="tipo_comprobante"/>
+                            <field name="tipo_documento_proveedor"/>
+                            <field name="numero_documento_proveedor"/>
+                            <field name="nombre_proveedor"/>
+                            <field name="base_imponible"/>
+                            <field name="igv"/>
+                            <field name="exonerado"/>
+                            <field name="inafecto"/>
+                            <field name="total"/>
+                            <field name="moneda"/>
+                        </list>
+                    </field>
+                    <field name="archivo_sire"
+                           filename="archivo_nombre"
+                           widget="binary"
+                           invisible="not archivo_sire"/>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista lista -->
+    <record id="view_sire_periodo_compra_list" model="ir.ui.view">
+        <field name="name">sire.periodo.compra.list</field>
+        <field name="model">sire.periodo.compra</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="nombre_periodo"/>
+                <field name="estado"/>
+                <field name="anio"/>
+                <field name="mes"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Acción -->
+    <record id="action_sire_periodo_compra" model="ir.actions.act_window">
+        <field name="name">Registros de Compras SIRE</field>
+        <field name="res_model">sire.periodo.compra</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

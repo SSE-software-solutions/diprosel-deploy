@@ -1,0 +1,91 @@
+<t t-name="sse_dashboard.SseDashboard">
+    <div class="dashboard-container">
+
+        <!-- Sección de Selección de Periodos -->
+        <div class="period-selection">
+            <button t-on-click="() => selectPeriod('Diario')" t-att-class="'period-button ' + (state.selectedPeriod === 'Diario' ? 'active' : '')">Diario</button>
+            <button t-on-click="() => selectPeriod('Semanal')" t-att-class="'period-button ' + (state.selectedPeriod === 'Semanal' ? 'active' : '')">Semanal</button>
+            <button t-on-click="() => selectPeriod('Mensual')" t-att-class="'period-button ' + (state.selectedPeriod === 'Mensual' ? 'active' : '')">Mensual</button>
+            <button t-on-click="() => selectPeriod('Anual')" t-att-class="'period-button ' + (state.selectedPeriod === 'Anual' ? 'active' : '')">Anual</button>
+        </div>
+
+        <!-- Sección de KPIs -->
+        <div class="kpi-section">
+            <t t-foreach="kpis" t-as="kpi" t-key="kpi.title">
+                <KpiCard t-props="kpi"/>
+            </t>
+        </div>
+
+        <!-- Sección de Tablas -->
+        <div class="table-section">
+            <div class="table-row">
+                <t t-if="state.tablas">
+                    <t t-if="state.tablas.bajoStock">
+                        <DataTable t-props="state.tablas.bajoStock"/>
+                    </t>
+                    <t t-if="state.tablas.bajaRotacion">
+                        <DataTable t-props="state.tablas.bajaRotacion"/>
+                    </t>
+                </t>
+            </div>
+            <div class="table-row">
+                <t t-if="state.tablas">
+                    <t t-if="state.tablas.masVendidos">
+                        <DataTable t-props="state.tablas.masVendidos"/>
+                    </t>
+                    <t t-if="state.tablas.categoriasVendidas">
+                        <DataTable t-props="state.tablas.categoriasVendidas"/>
+                    </t>
+                </t>
+            </div>
+            <div class="table-row">
+                <t t-if="state.tablas">
+                    <t t-if="state.tablas.negociosTop">
+                        <DataTable t-props="state.tablas.negociosTop"/>
+                    </t>
+                </t>
+            </div>
+        </div>
+
+        <!-- Sección de Gráficos de Línea -->
+        <div class="indicadores-section">
+            <h3>Indicadores de Evolución</h3>
+            <div class="chart-container">
+                <div class="chart-box">
+                    <h4>Evolutivo de Ventas</h4>
+                    <ChartLine t-props="state.evolutivoVentas"/>
+                </div>
+                <div class="chart-box">
+                    <h4>Evolutivo de Pedidos</h4>
+                    <ChartLine t-props="state.evolutivoPedidos"/>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sección de Día Giro -->
+        <div class="table-section">
+            <div class="table-row">
+                <t t-if="state.tablas">
+                    <t t-if="state.tablas.diaGiro">
+                        <DataTable t-props="state.tablas.diaGiro"/>
+                    </t>
+                </t>
+            </div>
+        </div>
+
+        <!-- Sección de Clientes y Marcas -->
+        <div class="table-section">
+            <div class="table-row">
+                <t t-if="state.tablas">
+                    <t t-if="state.tablas.topClientes">
+                        <DataTable t-props="state.tablas.topClientes"/>
+                    </t>
+                    <t t-if="state.tablas.topMarcas">
+                        <DataTable t-props="state.tablas.topMarcas"/>
+                    </t>
+                </t>
+            </div>
+        </div>
+
+    </div>
+</t>

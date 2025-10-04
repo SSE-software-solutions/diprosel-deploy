@@ -1,0 +1,16 @@
+<t t-name="sse_dashboard.KpiCard">
+    <div class="kpi-card">
+        <div class="kpi-value">
+            <h2 t-esc="props.value"/>
+        </div>
+        <div class="kpi-title">
+            <p t-esc="props.title"/>
+        </div>
+        <div class="kpi-trend">
+            <span t-att-class="'trend ' + (props.trend >= 0 ? 'positive' : 'negative')">
+                <i t-att-class="'fa ' + (props.trend >= 0 ? 'fa-arrow-up' : 'fa-arrow-down')"/>
+                <t t-esc="props.trend + '%'"/> Desde el ultimo periodo
+            </span>
+        </div>
+    </div>
+</t>

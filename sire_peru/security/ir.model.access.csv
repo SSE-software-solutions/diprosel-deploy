@@ -1,0 +1,10 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_sire_ventas_user,sire.ventas user,model_sire_ventas,base.group_user,1,0,0,0
+access_sire_ventas_manager,sire.ventas manager,model_sire_ventas,base.group_system,1,1,1,1
+access_sire_periodo_user,sire.periodo user,model_sire_periodo,base.group_user,1,0,0,0
+access_sire_periodo_manager,sire.periodo manager,model_sire_periodo,base.group_system,1,1,1,1
+
+access_sire_compras_user,sire.compras user,model_sire_compras,base.group_user,1,0,0,0
+access_sire_compras_manager,sire.compras manager,model_sire_compras,base.group_system,1,1,1,1
+access_sire_periodo_compra_user,sire.periodo.compra user,model_sire_periodo_compra,base.group_user,1,0,0,0
+access_sire_periodo_compra_manager,sire.periodo.compra manager,model_sire_periodo_compra,base.group_system,1,1,1,1

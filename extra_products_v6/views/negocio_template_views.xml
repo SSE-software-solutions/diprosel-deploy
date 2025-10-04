@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<odoo>
+    <!-- Vista de Formulario para Negocio -->
+    <record id="product_business_view_form" model="ir.ui.view">
+        <field name="name">product.business.form</field>
+        <field name="model">product.business</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <h1>
+                        <field name="name" string="Nombre del Negocio"/>
+                    </h1>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Vista de Lista para Negocio -->
+    <record id="product_business_view_list" model="ir.ui.view">
+        <field name="name">product.business.list</field>
+        <field name="model">product.business</field>
+        <field name="arch" type="xml">
+            <list string="Lista de Negocios">
+                <field name="name"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Acción y Menú para Negocio -->
+    <record id="product_business_action" model="ir.actions.act_window">
+        <field name="name">Negocios</field>
+        <field name="res_model">product.business</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem id="product_business_menu" 
+              name="Negocios" 
+              parent="stock.menu_stock_inventory_control"
+              action="product_business_action" 
+              sequence="10"/>
+</odoo>

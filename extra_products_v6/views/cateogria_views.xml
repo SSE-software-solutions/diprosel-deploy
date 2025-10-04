@@ -1,0 +1,29 @@
+<odoo>
+    <!-- Acción para Categoría -->
+    <record id="product_products_category_action" model="ir.actions.act_window">
+        <field name="name">Categorías</field>
+        <field name="res_model">product.products.category</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menú para Categoría -->
+    <menuitem id="menu_product_category"
+              name="Categorías de Productos"
+              parent="stock.menu_stock_inventory_control"
+              action="product_products_category_action"
+              sequence="20"/>
+
+    <!-- Acción para Sub Categoría -->
+    <record id="product_sub_category_action" model="ir.actions.act_window">
+        <field name="name">Sub Categorías</field>
+        <field name="res_model">product.sub.category</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menú para Sub Categoría -->
+    <menuitem id="menu_product_sub_category"
+              name="Sub Categorías de Productos"
+              parent="stock.menu_stock_inventory_control"
+              action="product_sub_category_action"
+              sequence="30"/>
+</odoo>

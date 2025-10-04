@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+
+    <!-- Vista Lista de Ventas -->
+    <record id="view_sire_ventas_list" model="ir.ui.view">
+        <field name="name">sire.ventas.list</field>
+        <field name="model">sire.ventas</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="periodo_id"/>
+                <field name="fecha_emision"/>
+                <field name="tipo_comprobante"/>
+                <field name="tipo_documento_cliente"/>
+                <field name="numero_documento_cliente"/>
+                <field name="nombre_cliente"/>
+                <field name="base_imponible"/>
+                <field name="igv"/>
+                <field name="exonerado"/>
+                <field name="inafecto"/>
+                <field name="total"/>
+                <field name="moneda"/>
+            </list>
+        </field>
+    </record>
+
+    <!-- Vista Formulario de Venta -->
+    <record id="view_sire_ventas_form" model="ir.ui.view">
+        <field name="name">sire.ventas.form</field>
+        <field name="model">sire.ventas</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <field name="periodo_id"/>
+                        <field name="fecha_emision"/>
+                        <field name="tipo_comprobante"/>
+                        <field name="tipo_documento_cliente"/>
+                        <field name="numero_documento_cliente"/>
+                        <field name="nombre_cliente"/>
+                        <field name="base_imponible"/>
+                        <field name="igv"/>
+                        <field name="exonerado"/>
+                        <field name="inafecto"/>
+                        <field name="total"/>
+                        <field name="moneda"/>
+                        <field name="serie"/>
+                        <field name="numero_comprobante"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Acción para Registros de Ventas -->
+    <record id="action_sire_ventas" model="ir.actions.act_window">
+        <field name="name">Registros de Ventas SIRE</field>
+        <field name="res_model">sire.ventas</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{}</field>
+        <field name="help" type="html">
+            <p>
+                Aquí verás los registros de ventas generados para los períodos del SIRE.
+            </p>
+        </field>
+    </record>
+
+</odoo>

@@ -1,0 +1,28 @@
+<odoo>
+    <record id="view_product_template_form_inherit_margins" model="ir.ui.view">
+        <field name="name">product.template.form.inherit.margins</field>
+        <field name="model">product.template</field>
+        <field name="inherit_id" ref="product.product_template_only_form_view" />
+        <field name="arch" type="xml">
+            <xpath expr="//page[@name='inventory']" position="after">
+                <page string="Márgenes" name="margins">
+                    <group>
+                        <group>
+                            <!-- Primera columna -->
+                            <field name="standard_price" readonly="1"/>
+                            <field name="x_profit_percentage" string="Porcentaje de ganancia (%)"/>
+                        </group>
+                        <group>
+                            <!-- Segunda columna -->
+                            <field name="list_price" string="Precio de venta (calculado)" readonly="1"/>
+                        </group>
+                        <group string="Lista de precios personalizada">
+                            <field name="x_pricelist_id"/>
+                            <field name="x_margin_for_pricelist"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>

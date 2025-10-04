@@ -1,0 +1,5 @@
+<t t-name="sse_dashboard.ChartLine">
+    <div class="chart-container">
+        <canvas t-ref="chart"></canvas>
+    </div>
+</t>

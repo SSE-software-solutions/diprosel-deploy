@@ -1,0 +1,32 @@
+<t t-name="sse_dashboard.DataTable">
+    <div class="table-box">
+        <h4 t-esc="props.title"/>
+        <table class="table table-bordered table-striped">
+            <thead>
+                <tr>
+                    <t t-foreach="props.headers" t-as="header" t-key="header">
+                        <th t-esc="header"/>
+                    </t>
+                </tr>
+            </thead>
+            <tbody>
+                <t t-if="props.rows and props.rows.length > 0">
+                    <t t-foreach="props.rows" t-as="row" t-key="row[0]">
+                        <tr>
+                            <t t-foreach="row" t-as="cell" t-key="cell">
+                                <td t-esc="cell"/>
+                            </t>
+                        </tr>
+                    </t>
+                </t>
+                <t t-else="">
+                    <tr>
+                        <td t-att-colspan="props.headers.length" class="text-center text-muted">
+                            Sin datos disponibles
+                        </td>
+                    </tr>
+                </t>
+            </tbody>
+        </table>
+    </div>
+</t>

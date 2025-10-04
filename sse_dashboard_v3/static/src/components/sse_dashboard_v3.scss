@@ -1,0 +1,150 @@
+/* Contenedor General */
+.dashboard-container {
+    background-color: #ffffff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.1);
+    overflow-y: auto;
+    height: 100vh;
+}
+
+/* Selección de Periodos */
+.period-selection {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 20px;
+
+    .period-button {
+        background-color: #f8f9fa;
+        border: 1px solid #dee2e6;
+        padding: 8px 15px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: 0.3s ease;
+
+        &:hover {
+            background-color: #e2e6ea;
+        }
+
+        &.active {
+            background-color: #007bff;
+            color: white;
+            border-color: #007bff;
+        }
+    }
+}
+
+/* KPIs */
+.kpi-section {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 15px;
+    margin-bottom: 30px;
+}
+
+/* Sección de Tablas */
+.table-section {
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+}
+
+.table-row {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+/* Componente de Tabla */
+.table-box {
+    flex: 1;
+    min-width: 48%;
+    background-color: #fff;
+    border-radius: 12px;
+    padding: 20px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.table-box h4 {
+    font-size: 18px;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 15px;
+}
+
+/* Tabla interna */
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.table thead th {
+    background-color: #f8f9fa;
+    font-weight: bold;
+    padding: 12px;
+    text-align: center;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.table tbody td {
+    padding: 10px;
+    text-align: center;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.table tbody tr:hover {
+    background-color: #f1f1f1;
+}
+
+/* Contenedor de sección de gráficos */
+.indicadores-section {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    margin-bottom: 20px;
+
+    h3 {
+        font-size: 20px;
+        font-weight: bold;
+        margin-bottom: 15px;
+    }
+
+    .chart-container {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        width: 100%;
+        height: 300px; // 👈 Este valor es clave
+        position: relative;
+        gap: 20px;
+    }
+
+    .chart-box {
+        flex: 1 1 calc(50% - 10px); /* Dos en una fila */
+        min-width: 300px;
+        height: 350px;
+        padding: 15px;
+        border-radius: 10px;
+        background-color: #fefefe;
+        box-shadow: 0px 3px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+
+        h4 {
+            font-size: 16px;
+            margin-bottom: 10px;
+        }
+
+        canvas {
+            flex-grow: 1;
+            width: 100% !important;
+            height: 100% !important;
+        }
+    }
+}

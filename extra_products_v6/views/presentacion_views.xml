@@ -1,0 +1,15 @@
+<odoo>
+    <!-- Acción para Presentación -->
+    <record id="product_presentation_action" model="ir.actions.act_window">
+        <field name="name">Presentaciones</field>
+        <field name="res_model">product.presentation</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menú para Presentación -->
+    <menuitem id="menu_product_presentation"
+              name="Presentaciones"
+              parent="stock.menu_stock_inventory_control"
+              action="product_presentation_action"
+              sequence="60"/>
+</odoo>

@@ -1,0 +1,23 @@
+<odoo>
+    <!-- Menú principal dentro de Facturación -->
+    <menuitem id="menu_sire_base" 
+              name="SIRE" 
+              parent="account.menu_finance"
+              sequence="15" 
+              groups="base.group_system"/>
+
+    <!-- Submenús -->
+    <menuitem id="menu_sire_periodos" 
+              name="SIRE Ventas" 
+              parent="menu_sire_base" 
+              action="action_sire_periodo" 
+              sequence="10" 
+              groups="base.group_system"/>
+    
+    <menuitem id="menu_sire_compra_root" 
+              name="SIRE Compras" 
+              parent="menu_sire_base" 
+              sequence="20" 
+              action="action_sire_periodo_compra" 
+              groups="base.group_system"/>
+</odoo>

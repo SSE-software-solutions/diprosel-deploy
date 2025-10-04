@@ -1,0 +1,15 @@
+<odoo>
+    <!-- Acción para Grupo de Artículo -->
+    <record id="product_article_group_action" model="ir.actions.act_window">
+        <field name="name">Grupos de Artículos</field>
+        <field name="res_model">product.article.group</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menú para Grupo de Artículo -->
+    <menuitem id="menu_product_article_group"
+              name="Grupos de Artículos"
+              parent="stock.menu_stock_inventory_control"
+              action="product_article_group_action"
+              sequence="50"/>
+</odoo>

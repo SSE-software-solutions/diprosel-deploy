@@ -1,0 +1,6 @@
+id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
+access_business_sector,access.business.sector,model_business_sector,,1,1,1,1
+access_product_line,access.product.line,model_product_line,,1,1,1,1
+access_product_model,access.product.model,model_product_model,,1,1,1,1
+access_product_brand,access.product.brand,model_product_brand,,1,1,1,1
+access_product_subfamily,access.product.subfamily,model_product_subfamily,,1,1,1,1

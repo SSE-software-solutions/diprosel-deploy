@@ -1,0 +1,15 @@
+<odoo>
+    <!-- Acción para Tier -->
+    <record id="product_tier_action" model="ir.actions.act_window">
+        <field name="name">Tiers</field>
+        <field name="res_model">product.tier</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <!-- Menú para Tier -->
+    <menuitem id="menu_product_tier"
+              name="Tiers"
+              parent="stock.menu_stock_inventory_control"
+              action="product_tier_action"
+              sequence="80"/>
+</odoo>
