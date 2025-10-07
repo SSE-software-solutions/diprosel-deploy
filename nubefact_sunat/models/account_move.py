@@ -131,25 +131,25 @@ class AccountMove(models.Model):
         return '0'  # Sin documento
     
     def _get_tipo_comprobante(self):
-        """Retorna el tipo de comprobante según SUNAT"""
+        """Retorna el tipo de comprobante según NubeFact: 1=FACTURA, 2=BOLETA, 3=NC, 4=ND"""
         self.ensure_one()
         
-        # Mapeo de tipos de comprobante SUNAT
+        # Mapeo según documentación de NubeFact (valores integer)
         if self.move_type == 'out_invoice':
-            # Determinar si es factura (01) o boleta (03) según tipo de documento del cliente
+            # Determinar si es factura (1) o boleta (2) según tipo de documento del cliente
             tipo_doc = self._get_tipo_documento_identidad(self.partner_id)
             if tipo_doc == '6':  # RUC
-                return '01'  # Factura
+                return 1  # FACTURA
             else:
-                return '03'  # Boleta de Venta
+                return 2  # BOLETA DE VENTA
         elif self.move_type == 'out_refund':
-            return '07'  # Nota de Crédito
+            return 3  # NOTA DE CRÉDITO
         elif self.move_type == 'in_invoice':
-            return '01'  # Factura de compra (no se envía a SUNAT normalmente)
+            return 1  # Factura de compra
         elif self.move_type == 'in_refund':
-            return '07'  # Nota de crédito de compra
+            return 3  # Nota de crédito de compra
         else:
-            return '01'  # Por defecto factura
+            return 1  # Por defecto factura
     
     def _prepare_nubefact_invoice_data(self):
         """Prepara los datos de la factura para enviar a NubeFact"""
@@ -175,17 +175,20 @@ class AccountMove(models.Model):
             if not line.tax_ids:
                 codigo_tipo_precio = '02'  # Precio unitario no incluye IGV
             
+            # Calcular IGV de la línea
+            igv_linea = line.price_total - line.price_subtotal
+            
             item = {
                 "unidad_de_medida": line.product_uom_id.name[:3].upper() if line.product_uom_id else "NIU",
                 "codigo": line.product_id.default_code or str(line.product_id.id),
                 "descripcion": line.name[:250],  # Máximo 250 caracteres
-                "cantidad": line.quantity,
-                "valor_unitario": round(line.price_unit, 2),
-                "precio_unitario": round(line.price_unit * (1 + (line.tax_ids[0].amount / 100 if line.tax_ids else 0)), 2),
-                "descuento": round(line.discount, 2) if line.discount else 0,
+                "cantidad": round(line.quantity, 10),
+                "valor_unitario": round(line.price_unit, 10),
+                "precio_unitario": round(line.price_unit * (1 + (line.tax_ids[0].amount / 100 if line.tax_ids else 0)), 10),
+                "descuento": "" if not line.discount else round(line.discount, 2),
                 "subtotal": round(line.price_subtotal, 2),
-                "tipo_de_igv": 1 if line.tax_ids else 2,  # 1=Gravado, 2=Exonerado
-                "igv": round(line.price_total - line.price_subtotal, 2),
+                "tipo_de_igv": 1 if line.tax_ids else 8,  # 1=Gravado Operación Onerosa, 8=Exonerado
+                "igv": round(igv_linea, 2),
                 "total": round(line.price_total, 2),
                 "anticipo_regularizacion": False,
                 "anticipo_documento_serie": "",
@@ -193,39 +196,43 @@ class AccountMove(models.Model):
             }
             items.append(item)
         
-        # Estructura de datos según documentación NubeFact
+        # Mapear moneda según documentación (1=SOLES, 2=DÓLARES, 3=EUROS)
+        moneda_map = {'PEN': 1, 'USD': 2, 'EUR': 3}
+        moneda = moneda_map.get(self.currency_id.name, 1) if self.currency_id else 1
+        
+        # Estructura de datos según documentación oficial de NubeFact
         data = {
             "operacion": "generar_comprobante",
-            "tipo_de_comprobante": int(self._get_tipo_comprobante()),
+            "tipo_de_comprobante": self._get_tipo_comprobante(),
             "serie": self.serie_comprobante or "F001",
             "numero": int(self.numero_comprobante) if self.numero_comprobante and self.numero_comprobante.isdigit() else 1,
             "sunat_transaction": 1,  # 1 = Venta interna
             "cliente_tipo_de_documento": self._get_tipo_documento_identidad(self.partner_id),
             "cliente_numero_de_documento": self.partner_id.vat,
             "cliente_denominacion": self.partner_id.name[:100],
-            "cliente_direccion": self.partner_id.street or "",
+            "cliente_direccion": self.partner_id.street[:100] if self.partner_id.street else "",
             "cliente_email": self.partner_id.email or "",
             "cliente_email_1": "",
             "cliente_email_2": "",
             "fecha_de_emision": self.invoice_date.strftime('%d-%m-%Y') if self.invoice_date else fields.Date.today().strftime('%d-%m-%Y'),
             "fecha_de_vencimiento": self.invoice_date_due.strftime('%d-%m-%Y') if self.invoice_date_due else "",
-            "moneda": self.currency_id.name if self.currency_id else "PEN",
+            "moneda": moneda,
             "tipo_de_cambio": "",
             "porcentaje_de_igv": 18.00,
-            "descuento_global": 0.00,
-            "total_descuento": 0.00,
-            "total_anticipo": 0.00,
+            "descuento_global": "",
+            "total_descuento": "",
+            "total_anticipo": "",
             "total_gravada": round(base_imponible, 2),
-            "total_inafecta": 0.00,
-            "total_exonerada": 0.00,
+            "total_inafecta": "",
+            "total_exonerada": "",
             "total_igv": round(igv, 2),
-            "total_gratuita": 0.00,
-            "total_otros_cargos": 0.00,
+            "total_gratuita": "",
+            "total_otros_cargos": "",
             "total": round(total, 2),
             "percepcion_tipo": "",
-            "percepcion_base_imponible": 0.00,
-            "total_percepcion": 0.00,
-            "total_incluido_percepcion": 0.00,
+            "percepcion_base_imponible": "",
+            "total_percepcion": "",
+            "total_incluido_percepcion": "",
             "detraccion": False,
             "observaciones": self.narration or "",
             "documento_que_se_modifica_tipo": "",
@@ -235,12 +242,10 @@ class AccountMove(models.Model):
             "tipo_de_nota_de_debito": "",
             "enviar_automaticamente_a_la_sunat": True,
             "enviar_automaticamente_al_cliente": False,
-            "codigo_unico": "",
-            "condiciones_de_pago": self.invoice_payment_term_id.name if self.invoice_payment_term_id else "Contado",
+            "condiciones_de_pago": "",
             "medio_de_pago": "",
             "placa_vehiculo": "",
             "orden_compra_servicio": "",
-            "tabla_personalizada_codigo": "",
             "formato_de_pdf": "",
             "items": items
         }
@@ -276,25 +281,28 @@ class AccountMove(models.Model):
                             'Por favor, configure las credenciales en Contabilidad > Configuración > NubeFact.'))
         
         try:
-            # Preparar datos
+            # Preparar datos según documentación de NubeFact
             invoice_data = self._prepare_nubefact_invoice_data()
             
-            # URL de la API de NubeFact
+            # URL de la API de NubeFact (ya incluye el endpoint completo)
             url = config.get_api_url()
             
-            # Headers según documentación de NubeFact
+            # Headers según documentación oficial de NubeFact
+            # Authorization solo contiene el token, sin prefijo
             headers = {
-                'Authorization': f'Token token={config.token}',
+                'Authorization': config.token,
                 'Content-Type': 'application/json'
             }
             
-            _logger.info(f"Enviando factura {self.name} a NubeFact: {json.dumps(invoice_data, indent=2)}")
+            _logger.info(f"Enviando factura {self.name} a NubeFact")
+            _logger.debug(f"URL: {url}")
+            _logger.debug(f"Datos: {json.dumps(invoice_data, indent=2)}")
             
-            # Realizar petición
+            # Realizar petición POST a NubeFact
             response = requests.post(
                 url,
                 headers=headers,
-                data=json.dumps(invoice_data),
+                json=invoice_data,
                 timeout=30
             )
             
