@@ -36,15 +36,7 @@ class NubefactConfig(models.Model):
     api_url = fields.Char(
         string='URL API de NubeFact',
         required=True,
-        help='URL completa proporcionada por NubeFact (ejemplo: https://api.nubefact.com/api/v1/tu-identificador)'
-    )
-    
-    # Configuración de entorno
-    environment = fields.Selection([
-        ('test', 'Pruebas'),
-        ('production', 'Producción')
-    ], string='Entorno', default='production', required=True,
-        help='Seleccione el entorno. La URL de API es la misma para ambos.'
+        help='URL completa proporcionada por NubeFact. El entorno (pruebas/producción) se configura desde el panel de NubeFact.'
     )
     
     active = fields.Boolean(

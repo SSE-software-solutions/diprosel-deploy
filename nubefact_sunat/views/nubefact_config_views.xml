@@ -35,14 +35,17 @@
                     </div>
                     
                     <group>
-                        <group string="Credenciales">
+                        <group string="Credenciales de NubeFact">
                             <field name="ruc" placeholder="20XXXXXXXXX"/>
                             <field name="token" password="True" placeholder="Token proporcionado por NubeFact"/>
+                            <field name="api_url" placeholder="https://api.nubefact.com/api/v1/tu-identificador"/>
                         </group>
                         
-                        <group string="Configuración de API">
-                            <field name="api_url" placeholder="https://api.nubefact.com/api/v1/tu-identificador"/>
-                            <field name="environment" widget="radio"/>
+                        <group string="Información">
+                            <div class="alert alert-info" style="margin: 10px;">
+                                <p><strong>Nota:</strong> El entorno (Pruebas/Producción) se configura desde tu panel de NubeFact, no desde aquí.</p>
+                                <p>La URL que ingreses determinará si es pruebas o producción.</p>
+                            </div>
                         </group>
                     </group>
                     
@@ -63,16 +66,20 @@
                                     <h4>Instrucciones de Configuración</h4>
                                     <ol>
                                         <li>Regístrese en <a href="https://www.nubefact.com" target="_blank">NubeFact.com</a></li>
-                                        <li>Desde su panel de NubeFact, copie:
+                                        <li>Configure el entorno (Pruebas/Producción) desde su panel de NubeFact</li>
+                                        <li>Copie desde su panel de NubeFact:
                                             <ul>
                                                 <li><strong>Token de API</strong></li>
                                                 <li><strong>URL de API</strong> (ejemplo: https://api.nubefact.com/api/v1/xxx-xxx-xxx)</li>
                                             </ul>
                                         </li>
-                                        <li>Ingrese su RUC, Token y URL en este formulario</li>
-                                        <li>Haga clic en "Probar Conexión" para verificar la configuración</li>
+                                        <li>Pegue su RUC, Token y URL en el formulario</li>
+                                        <li>Haga clic en "Probar Conexión" para verificar</li>
                                     </ol>
-                                    <p><strong>Nota:</strong> La URL incluye su identificador único de NubeFact.</p>
+                                    <p><strong>Documentación:</strong> 
+                                        <a href="https://docs.google.com/document/d/1QWWSILBbjd4MDkJl7vCkL2RZvkPh0IC7Wa67BvoYIhA" target="_blank">Manual API JSON</a> | 
+                                        <a href="https://goo.gl/Lz7hAq" target="_blank">Manual API TXT</a>
+                                    </p>
                                 </div>
                             </group>
                         </page>
