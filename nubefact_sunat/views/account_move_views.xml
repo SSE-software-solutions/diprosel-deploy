@@ -88,29 +88,5 @@
         </field>
     </record>
 
-    <!-- Filtros adicionales para búsqueda -->
-    <record id="view_account_invoice_filter_inherit_nubefact" model="ir.ui.view">
-        <field name="name">account.invoice.select.inherit.nubefact</field>
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_account_invoice_filter"/>
-        <field name="arch" type="xml">
-            <xpath expr="//filter[@name='draft']" position="after">
-                <separator/>
-                <filter string="Enviados a SUNAT" name="sunat_sent" 
-                        domain="[('sunat_enviado', '=', True)]"/>
-                <filter string="Aceptados por SUNAT" name="sunat_accepted" 
-                        domain="[('sunat_estado', '=', 'accepted')]"/>
-                <filter string="Rechazados por SUNAT" name="sunat_rejected" 
-                        domain="[('sunat_estado', '=', 'rejected')]"/>
-                <filter string="No Enviados" name="sunat_not_sent" 
-                        domain="[('sunat_estado', '=', 'not_sent'), ('move_type', 'in', ['out_invoice', 'out_refund'])]"/>
-            </xpath>
-            
-            <xpath expr="//group[@name='groupby']" position="inside">
-                <filter string="Estado SUNAT" name="groupby_sunat_estado" 
-                        context="{'group_by': 'sunat_estado'}"/>
-            </xpath>
-        </field>
-    </record>
 
 </odoo>
