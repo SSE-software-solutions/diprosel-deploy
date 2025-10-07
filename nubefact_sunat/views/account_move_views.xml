@@ -94,7 +94,7 @@
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_invoice_tree"/>
         <field name="arch" type="xml">
-            <xpath expr="//tree" position="attributes">
+            <xpath expr="//list" position="attributes">
                 <attribute name="decoration-success">sunat_estado == 'accepted'</attribute>
                 <attribute name="decoration-warning">sunat_estado == 'sent'</attribute>
                 <attribute name="decoration-danger">sunat_estado in ['rejected', 'error']</attribute>
