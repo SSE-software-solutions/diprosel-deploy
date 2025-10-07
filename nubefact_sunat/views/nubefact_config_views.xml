@@ -38,12 +38,11 @@
                         <group string="Credenciales">
                             <field name="ruc" placeholder="20XXXXXXXXX"/>
                             <field name="token" password="True" placeholder="Token proporcionado por NubeFact"/>
-                            <field name="environment" widget="radio"/>
                         </group>
                         
-                        <group string="URLs de API">
-                            <field name="api_url_test" readonly="1"/>
-                            <field name="api_url_production" readonly="1"/>
+                        <group string="Configuración de API">
+                            <field name="api_url" placeholder="https://api.nubefact.com/api/v1/tu-identificador"/>
+                            <field name="environment" widget="radio"/>
                         </group>
                     </group>
                     
@@ -64,12 +63,16 @@
                                     <h4>Instrucciones de Configuración</h4>
                                     <ol>
                                         <li>Regístrese en <a href="https://www.nubefact.com" target="_blank">NubeFact.com</a></li>
-                                        <li>Obtenga su Token de API desde su panel de control</li>
-                                        <li>Ingrese su RUC y Token en este formulario</li>
-                                        <li>Seleccione el entorno (Pruebas o Producción)</li>
+                                        <li>Desde su panel de NubeFact, copie:
+                                            <ul>
+                                                <li><strong>Token de API</strong></li>
+                                                <li><strong>URL de API</strong> (ejemplo: https://api.nubefact.com/api/v1/xxx-xxx-xxx)</li>
+                                            </ul>
+                                        </li>
+                                        <li>Ingrese su RUC, Token y URL en este formulario</li>
                                         <li>Haga clic en "Probar Conexión" para verificar la configuración</li>
                                     </ol>
-                                    <p><strong>Nota:</strong> En modo de pruebas, los comprobantes no se envían a SUNAT real.</p>
+                                    <p><strong>Nota:</strong> La URL incluye su identificador único de NubeFact.</p>
                                 </div>
                             </group>
                         </page>
@@ -87,7 +90,7 @@
             <list string="Configuraciones NubeFact">
                 <field name="company_id"/>
                 <field name="ruc"/>
-                <field name="environment"/>
+                <field name="api_url"/>
                 <field name="connection_status" 
                        decoration-success="connection_status == 'success'"
                        decoration-danger="connection_status == 'failed'"

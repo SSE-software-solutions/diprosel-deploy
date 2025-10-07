@@ -32,23 +32,19 @@ class NubefactConfig(models.Model):
         help='RUC de la empresa emisora'
     )
     
+    # URL de API personalizada de NubeFact
+    api_url = fields.Char(
+        string='URL API de NubeFact',
+        required=True,
+        help='URL completa proporcionada por NubeFact (ejemplo: https://api.nubefact.com/api/v1/tu-identificador)'
+    )
+    
     # Configuración de entorno
     environment = fields.Selection([
         ('test', 'Pruebas'),
         ('production', 'Producción')
-    ], string='Entorno', default='test', required=True)
-    
-    # URLs de API (según documentación de NubeFact)
-    api_url_test = fields.Char(
-        string='URL API Pruebas',
-        default='https://api.nubefact.com/api/v1/test',
-        readonly=True
-    )
-    
-    api_url_production = fields.Char(
-        string='URL API Producción',
-        default='https://api.nubefact.com/api/v1',
-        readonly=True
+    ], string='Entorno', default='production', required=True,
+        help='Seleccione el entorno. La URL de API es la misma para ambos.'
     )
     
     active = fields.Boolean(
@@ -78,9 +74,11 @@ class NubefactConfig(models.Model):
     ]
     
     def get_api_url(self):
-        """Retorna la URL de la API según el entorno configurado"""
+        """Retorna la URL de la API configurada"""
         self.ensure_one()
-        return self.api_url_production if self.environment == 'production' else self.api_url_test
+        # Remover espacios y @ si los hay
+        url = self.api_url.strip().lstrip('@')
+        return url
     
     def action_test_connection(self):
         """Prueba la conexión con NubeFact"""
@@ -91,12 +89,14 @@ class NubefactConfig(models.Model):
         self.ensure_one()
         
         try:
-            url = f"{self.get_api_url()}/test"
+            # NubeFact no tiene endpoint de prueba, solo verificamos que responda
+            url = self.get_api_url()
             headers = {
-                'Authorization': f'Bearer {self.token}',
+                'Authorization': f'Token token={self.token}',
                 'Content-Type': 'application/json'
             }
             
+            # Hacer un request simple para verificar autenticación
             response = requests.get(url, headers=headers, timeout=10)
             
             self.last_connection_test = datetime.now()

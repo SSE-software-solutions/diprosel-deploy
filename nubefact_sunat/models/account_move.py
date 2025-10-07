@@ -279,12 +279,12 @@ class AccountMove(models.Model):
             # Preparar datos
             invoice_data = self._prepare_nubefact_invoice_data()
             
-            # URL de la API
-            url = f"{config.get_api_url()}/invoice"
+            # URL de la API de NubeFact
+            url = config.get_api_url()
             
-            # Headers
+            # Headers según documentación de NubeFact
             headers = {
-                'Authorization': f'Bearer {config.token}',
+                'Authorization': f'Token token={config.token}',
                 'Content-Type': 'application/json'
             }
             
