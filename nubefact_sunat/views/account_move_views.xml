@@ -90,17 +90,12 @@
 
     <!-- Heredar vista de árbol de facturas -->
     <record id="view_invoice_tree_inherit_nubefact" model="ir.ui.view">
-        <field name="name">account.move.tree.inherit.nubefact</field>
+        <field name="name">account.move.list.inherit.nubefact</field>
         <field name="model">account.move</field>
         <field name="inherit_id" ref="account.view_invoice_tree"/>
         <field name="arch" type="xml">
-            <xpath expr="//list" position="attributes">
-                <attribute name="decoration-success">sunat_estado == 'accepted'</attribute>
-                <attribute name="decoration-warning">sunat_estado == 'sent'</attribute>
-                <attribute name="decoration-danger">sunat_estado in ['rejected', 'error']</attribute>
-            </xpath>
-            
-            <xpath expr="//field[@name='state']" position="after">
+            <!-- Agregar campos de SUNAT después del campo state -->
+            <field name="state" position="after">
                 <field name="sunat_estado" optional="show" 
                        decoration-info="sunat_estado == 'not_sent'"
                        decoration-warning="sunat_estado == 'sent'"
@@ -108,7 +103,7 @@
                        decoration-danger="sunat_estado in ['rejected', 'error']"/>
                 <field name="sunat_enviado" optional="hide"/>
                 <field name="sunat_fecha_envio" optional="hide"/>
-            </xpath>
+            </field>
         </field>
     </record>
 

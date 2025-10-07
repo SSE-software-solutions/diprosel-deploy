@@ -19,7 +19,7 @@
         * Registro de respuestas de SUNAT
     """,
     'author': 'SSE',
-    'depends': ['account', 'l10n_pe'],
+    'depends': ['account'],
     'data': [
         'security/ir.model.access.csv',
         'views/nubefact_config_views.xml',

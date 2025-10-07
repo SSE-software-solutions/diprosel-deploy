@@ -110,18 +110,25 @@ class AccountMove(models.Model):
     
     def _get_tipo_documento_identidad(self, partner):
         """Mapea el tipo de documento de identidad para SUNAT"""
-        if not partner.l10n_latam_identification_type_id:
-            return '0'  # Sin documento
+        # Verificar si existe el campo de localización latam
+        if hasattr(partner, 'l10n_latam_identification_type_id') and partner.l10n_latam_identification_type_id:
+            # Mapeo según códigos SUNAT
+            tipo_doc_map = {
+                'DNI': '1',
+                'RUC': '6',
+                'Pasaporte': '7',
+                'Carnet de Extranjería': '4',
+            }
+            return tipo_doc_map.get(partner.l10n_latam_identification_type_id.name, '0')
         
-        # Mapeo según códigos SUNAT
-        tipo_doc_map = {
-            'DNI': '1',
-            'RUC': '6',
-            'Pasaporte': '7',
-            'Carnet de Extranjería': '4',
-        }
+        # Fallback: determinar por el VAT si es RUC (11 dígitos) o DNI (8 dígitos)
+        if partner.vat:
+            if len(partner.vat) == 11 and partner.vat.startswith('20'):
+                return '6'  # RUC
+            elif len(partner.vat) == 8:
+                return '1'  # DNI
         
-        return tipo_doc_map.get(partner.l10n_latam_identification_type_id.name, '0')
+        return '0'  # Sin documento
     
     def _get_tipo_comprobante(self):
         """Retorna el tipo de comprobante según SUNAT"""
@@ -130,7 +137,8 @@ class AccountMove(models.Model):
         # Mapeo de tipos de comprobante SUNAT
         if self.move_type == 'out_invoice':
             # Determinar si es factura (01) o boleta (03) según tipo de documento del cliente
-            if self.partner_id.l10n_latam_identification_type_id.name == 'RUC':
+            tipo_doc = self._get_tipo_documento_identidad(self.partner_id)
+            if tipo_doc == '6':  # RUC
                 return '01'  # Factura
             else:
                 return '03'  # Boleta de Venta
