@@ -88,25 +88,6 @@
         </field>
     </record>
 
-    <!-- Heredar vista de árbol de facturas -->
-    <record id="view_invoice_tree_inherit_nubefact" model="ir.ui.view">
-        <field name="name">account.move.list.inherit.nubefact</field>
-        <field name="model">account.move</field>
-        <field name="inherit_id" ref="account.view_invoice_tree"/>
-        <field name="arch" type="xml">
-            <!-- Agregar campos de SUNAT después del campo state -->
-            <field name="state" position="after">
-                <field name="sunat_estado" optional="show" 
-                       decoration-info="sunat_estado == 'not_sent'"
-                       decoration-warning="sunat_estado == 'sent'"
-                       decoration-success="sunat_estado == 'accepted'"
-                       decoration-danger="sunat_estado in ['rejected', 'error']"/>
-                <field name="sunat_enviado" optional="hide"/>
-                <field name="sunat_fecha_envio" optional="hide"/>
-            </field>
-        </field>
-    </record>
-
     <!-- Filtros adicionales para búsqueda -->
     <record id="view_account_invoice_filter_inherit_nubefact" model="ir.ui.view">
         <field name="name">account.invoice.select.inherit.nubefact</field>
