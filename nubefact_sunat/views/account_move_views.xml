@@ -17,6 +17,14 @@
                         icon="fa-paper-plane"
                         help="Enviar comprobante a SUNAT mediante NubeFact"/>
                 
+                <button name="action_consultar_sunat" 
+                        string="Consultar en SUNAT" 
+                        type="object" 
+                        class="btn-secondary"
+                        invisible="state != 'posted' or move_type not in ['out_invoice', 'out_refund']"
+                        icon="fa-search"
+                        help="Consultar estado del comprobante en NubeFact/SUNAT"/>
+                
                 <button name="action_download_pdf" 
                         string="Descargar PDF" 
                         type="object" 

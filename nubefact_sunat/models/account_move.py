@@ -268,7 +268,7 @@ class AccountMove(models.Model):
             raise UserError(_('Solo se pueden enviar facturas confirmadas.'))
         
         if self.sunat_enviado and self.sunat_estado == 'accepted':
-            raise UserError(_('Este comprobante ya fue aceptado por SUNAT.'))
+            raise UserError(_('Este comprobante ya fue aceptado por SUNAT. Use "Consultar en SUNAT" para actualizar la información.'))
         
         # Obtener configuración de NubeFact
         config = self.env['nubefact.config'].search([
@@ -386,6 +386,122 @@ class AccountMove(models.Model):
             })
             
             raise UserError(_('Error al enviar a SUNAT: %s') % str(e))
+    
+    def action_consultar_sunat(self):
+        """Consulta el estado de un comprobante en NubeFact/SUNAT"""
+        self.ensure_one()
+        
+        # Validaciones previas
+        if self.state != 'posted':
+            raise UserError(_('Solo se pueden consultar facturas confirmadas.'))
+        
+        # Obtener configuración de NubeFact
+        config = self.env['nubefact.config'].search([
+            ('company_id', '=', self.company_id.id),
+            ('active', '=', True)
+        ], limit=1)
+        
+        if not config:
+            raise UserError(_('No se ha configurado la conexión con NubeFact.'))
+        
+        try:
+            # Preparar datos de consulta según documentación
+            consulta_data = {
+                "operacion": "consultar_comprobante",
+                "tipo_de_comprobante": self._get_tipo_comprobante(),
+                "serie": self.serie_comprobante or "F001",
+                "numero": int(self.numero_comprobante) if self.numero_comprobante and self.numero_comprobante.isdigit() else 1
+            }
+            
+            # URL de la API de NubeFact
+            url = config.get_api_url()
+            
+            # Headers según documentación oficial
+            headers = {
+                'Authorization': config.token,
+                'Content-Type': 'application/json'
+            }
+            
+            _logger.info(f"Consultando factura {self.name} en NubeFact")
+            
+            # Realizar petición
+            response = requests.post(
+                url,
+                headers=headers,
+                json=consulta_data,
+                timeout=30
+            )
+            
+            _logger.info(f"Respuesta de consulta NubeFact: Status {response.status_code}, Body: {response.text}")
+            
+            # Procesar respuesta
+            if response.status_code == 200:
+                response_data = response.json()
+                
+                # Si el documento existe en NubeFact
+                if 'errors' not in response_data or not response_data['errors']:
+                    # Actualizar campos con la información de NubeFact
+                    self.write({
+                        'sunat_enviado': True,
+                        'sunat_estado': 'accepted' if response_data.get('aceptada_por_sunat') else 'rejected',
+                        'sunat_enlace_pdf': response_data.get('enlace_del_pdf', ''),
+                        'sunat_enlace_xml': response_data.get('enlace_del_xml', ''),
+                        'sunat_enlace_cdr': response_data.get('enlace_del_cdr', ''),
+                        'sunat_codigo_hash': response_data.get('codigo_hash', ''),
+                        'sunat_response': json.dumps(response_data, indent=2),
+                    })
+                    
+                    if response_data.get('aceptada_por_sunat'):
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': _('Consulta Exitosa'),
+                                'message': _('El comprobante está aceptado por SUNAT. Se han actualizado los enlaces de descarga.'),
+                                'type': 'success',
+                                'sticky': False,
+                            }
+                        }
+                    else:
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': _('Comprobante Encontrado'),
+                                'message': f"{_('Estado')}: {response_data.get('sunat_description', 'Rechazado')}",
+                                'type': 'warning',
+                                'sticky': True,
+                            }
+                        }
+                else:
+                    # El documento no existe en NubeFact
+                    error_msg = response_data.get('errors', 'Documento no encontrado')
+                    return {
+                        'type': 'ir.actions.client',
+                        'tag': 'display_notification',
+                        'params': {
+                            'title': _('Comprobante No Encontrado'),
+                            'message': f"{_('Este comprobante no existe en NubeFact')}: {error_msg}",
+                            'type': 'warning',
+                            'sticky': True,
+                        }
+                    }
+            else:
+                error_msg = response.text
+                return {
+                    'type': 'ir.actions.client',
+                    'tag': 'display_notification',
+                    'params': {
+                        'title': _('Error'),
+                        'message': f"{_('Error al consultar')}: {error_msg}",
+                        'type': 'danger',
+                        'sticky': True,
+                    }
+                }
+                
+        except Exception as e:
+            _logger.error(f"Error al consultar comprobante en SUNAT: {str(e)}", exc_info=True)
+            raise UserError(_('Error al consultar en SUNAT: %s') % str(e))
     
     def action_download_pdf(self):
         """Descarga el PDF del comprobante desde NubeFact"""
