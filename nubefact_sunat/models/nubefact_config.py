@@ -137,9 +137,34 @@ class NubefactConfig(models.Model):
             
             # Analizar respuesta
             if response.status_code == 200:
-                # Conexión exitosa (aunque el comprobante no exista)
+                # Conexión exitosa - NubeFact procesó la petición
+                # Puede responder con datos o con error "documento no existe"
+                # Ambos casos significan que el token y URL son correctos
+                try:
+                    response_data = response.json()
+                    error_msg = response_data.get('errors', '')
+                    
+                    # Si dice "documento no existe" o similar, es éxito (credenciales válidas)
+                    if 'no existe' in error_msg.lower() or 'not found' in error_msg.lower() or not error_msg:
+                        self.connection_status = 'success'
+                        self.connection_message = 'Conexión exitosa con NubeFact. Token y URL verificados correctamente.'
+                        
+                        return {
+                            'type': 'ir.actions.client',
+                            'tag': 'display_notification',
+                            'params': {
+                                'title': '✅ Conexión Exitosa',
+                                'message': 'Token y URL de NubeFact verificados correctamente. Ya puede enviar facturas a SUNAT.',
+                                'type': 'success',
+                                'sticky': False,
+                            }
+                        }
+                except:
+                    pass
+                
+                # Si llegamos aquí, también es éxito (status 200 = autenticado)
                 self.connection_status = 'success'
-                self.connection_message = f'Conexión exitosa con NubeFact. Token y URL correctos.'
+                self.connection_message = 'Conexión exitosa con NubeFact. Token y URL correctos.'
                 
                 return {
                     'type': 'ir.actions.client',
