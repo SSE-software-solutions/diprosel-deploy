@@ -4,19 +4,19 @@
     <!-- Vista de formulario para secuencias de documentos electrónicos -->
     <!-- No necesitamos heredar la vista, solo crear la acción para ver las secuencias -->
 
-    <!-- Vista de árbol para secuencias PE -->
-    <record id="view_sequence_tree_pe" model="ir.ui.view">
-        <field name="name">ir.sequence.tree.pe</field>
+    <!-- Vista de lista para secuencias PE (Odoo 18 usa 'list' en lugar de 'tree') -->
+    <record id="view_sequence_list_pe" model="ir.ui.view">
+        <field name="name">ir.sequence.list.pe</field>
         <field name="model">ir.sequence</field>
         <field name="arch" type="xml">
-            <tree string="Secuencias de Documentos Electrónicos">
+            <list string="Secuencias de Documentos Electrónicos">
                 <field name="name"/>
                 <field name="code"/>
                 <field name="prefix"/>
                 <field name="padding"/>
                 <field name="number_next_actual"/>
                 <field name="company_id" groups="base.group_multi_company"/>
-            </tree>
+            </list>
         </field>
     </record>
 
@@ -24,7 +24,7 @@
     <record id="action_sequence_pe_edi" model="ir.actions.act_window">
         <field name="name">Series de Documentos Electrónicos</field>
         <field name="res_model">ir.sequence</field>
-        <field name="view_mode">tree,form</field>
+        <field name="view_mode">list,form</field>
         <field name="domain">[('code', 'in', ['account.move.invoice.pe', 'account.move.boleta.pe', 'account.move.credit_note.pe', 'account.move.debit_note.pe'])]</field>
         <field name="context">{'default_implementation': 'standard'}</field>
         <field name="help" type="html">
