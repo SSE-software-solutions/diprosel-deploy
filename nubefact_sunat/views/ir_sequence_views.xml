@@ -2,16 +2,7 @@
 <odoo>
     
     <!-- Vista de formulario para secuencias de documentos electrónicos -->
-    <record id="view_sequence_form_pe" model="ir.ui.view">
-        <field name="name">ir.sequence.form.pe</field>
-        <field name="model">ir.sequence</field>
-        <field name="inherit_id" ref="base.sequence_view"/>
-        <field name="arch" type="xml">
-            <xpath expr="//field[@name='code']" position="after">
-                <field name="l10n_pe_is_edi" invisible="1"/>
-            </xpath>
-        </field>
-    </record>
+    <!-- No necesitamos heredar la vista, solo crear la acción para ver las secuencias -->
 
     <!-- Vista de árbol para secuencias PE -->
     <record id="view_sequence_tree_pe" model="ir.ui.view">
