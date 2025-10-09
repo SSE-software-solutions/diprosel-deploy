@@ -366,20 +366,28 @@ class AccountMove(models.Model):
         total_gravada = 0.0
         total_exonerada = 0.0
         total_inafecta = 0.0
+        total_gratuita = 0.0
         total_igv = 0.0
         
         for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
-            if line.tax_ids:
-                # Obtener la tasa del primer impuesto
-                tax_rate = line.tax_ids[0].amount if line.tax_ids else 0
-                
-                if tax_rate > 0:
-                    # Línea con IGV (gravada) - tasa mayor a 0%
-                    total_gravada += line.price_subtotal
-                    total_igv += (line.price_total - line.price_subtotal)
-                else:
-                    # Línea con impuesto 0% (exonerada)
-                    total_exonerada += line.price_subtotal
+            # Verificar si es gratuito (precio unitario = 0)
+            if line.price_unit == 0:
+                total_gratuita += line.price_subtotal
+                continue
+            
+            # Filtrar solo impuestos de tipo IGV (excluir tributos especiales)
+            igv_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA'] and t.amount > 0)
+            exo_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA', 'EXO'] and t.amount == 0)
+            
+            if igv_taxes:
+                # Línea con IGV (gravada) - tiene impuesto IGV mayor a 0%
+                total_gravada += line.price_subtotal
+                # Calcular solo el IGV, ignorando otros tributos
+                for tax in igv_taxes:
+                    total_igv += line.price_subtotal * (tax.amount / 100)
+            elif exo_taxes or (line.tax_ids and not igv_taxes):
+                # Línea con impuesto 0% o con nombre que indica exonerado (exonerada)
+                total_exonerada += line.price_subtotal
             else:
                 # Línea sin impuestos (inafecta)
                 total_inafecta += line.price_subtotal
@@ -389,26 +397,39 @@ class AccountMove(models.Model):
         # Preparar items
         items = []
         for idx, line in enumerate(self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'), start=1):
-            # Calcular IGV de la línea
-            igv_linea = line.price_total - line.price_subtotal
+            # Filtrar solo impuestos de tipo IGV (excluir tributos especiales como ICBPER, ISC, etc.)
+            igv_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA'] and t.amount > 0)
+            exo_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA', 'EXO'] and t.amount == 0)
+            
+            # Calcular solo el IGV (ignorando otros tributos)
+            igv_linea = 0.0
+            igv_rate = 0.0
+            
+            if igv_taxes:
+                # Solo calcular el IGV, no otros tributos
+                for tax in igv_taxes:
+                    igv_linea += line.price_subtotal * (tax.amount / 100)
+                    igv_rate = tax.amount  # Usar la tasa del primer IGV encontrado
             
             # Determinar el tipo de afectación del IGV según el impuesto
-            tipo_de_igv = 10  # Por defecto: Gravado - Operación Onerosa
-            
-            if line.tax_ids:
-                tax_rate = line.tax_ids[0].amount if line.tax_ids else 0
-                
-                if tax_rate > 0:
-                    # IGV 18% u otro porcentaje mayor a 0
-                    tipo_de_igv = 10  # Gravado - Operación Onerosa
-                else:
-                    # Impuesto con tasa 0% - Exonerado
-                    tipo_de_igv = 20  # Exonerado - Operación Onerosa
-                    igv_linea = 0  # Asegurar que IGV sea 0
+            # Verificar si es gratuito
+            if line.price_unit == 0:
+                tipo_de_igv = 11  # Gravada - Retiro por premio
+                igv_linea = 0
+            elif igv_taxes:
+                # IGV 18% u otro porcentaje mayor a 0
+                tipo_de_igv = 10  # Gravado - Operación Onerosa
+            elif exo_taxes or (line.tax_ids and not igv_taxes):
+                # Impuesto con tasa 0% o tributo especial - Exonerado
+                tipo_de_igv = 20  # Exonerado - Operación Onerosa
+                igv_linea = 0  # Asegurar que IGV sea 0
             else:
                 # Sin impuestos - Inafecto
                 tipo_de_igv = 30  # Inafecto - Operación Onerosa
                 igv_linea = 0  # Asegurar que IGV sea 0
+            
+            # Calcular precio unitario con IGV (solo si tiene IGV)
+            precio_con_igv = line.price_unit * (1 + (igv_rate / 100)) if igv_rate > 0 else line.price_unit
             
             item = {
                 "unidad_de_medida": self._get_sunat_uom_code(line.product_uom_id),
@@ -416,12 +437,12 @@ class AccountMove(models.Model):
                 "descripcion": line.name[:250],  # Máximo 250 caracteres
                 "cantidad": round(line.quantity, 10),
                 "valor_unitario": round(line.price_unit, 10),
-                "precio_unitario": round(line.price_unit * (1 + (line.tax_ids[0].amount / 100 if line.tax_ids else 0)), 10),
+                "precio_unitario": round(precio_con_igv, 10),
                 "descuento": "" if not line.discount else round(line.discount, 2),
                 "subtotal": round(line.price_subtotal, 2),
                 "tipo_de_igv": tipo_de_igv,
                 "igv": round(igv_linea, 2),
-                "total": round(line.price_total, 2),
+                "total": round(line.price_subtotal + igv_linea, 2),
                 "anticipo_regularizacion": False,
                 "anticipo_documento_serie": "",
                 "anticipo_documento_numero": ""
@@ -472,7 +493,7 @@ class AccountMove(models.Model):
             "total_inafecta": round(total_inafecta, 2) if total_inafecta > 0 else "",
             "total_exonerada": round(total_exonerada, 2) if total_exonerada > 0 else "",
             "total_igv": round(total_igv, 2) if total_igv > 0 else "",
-            "total_gratuita": "",
+            "total_gratuita": round(total_gratuita, 2) if total_gratuita > 0 else "",
             "total_otros_cargos": "",
             "total": round(total, 2),
             "percepcion_tipo": "",
