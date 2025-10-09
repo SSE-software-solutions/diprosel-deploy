@@ -395,21 +395,28 @@ class AccountMove(models.Model):
             # Usar totales que Odoo ya calculó
             igv_linea = line.price_total - line.price_subtotal
             
-            # Determinar el tipo de afectación del IGV
+            # Determinar el tipo de afectación del IGV según NubeFact
             if line.price_unit == 0:
+                # Gratuito
                 tipo_de_igv = 11  # Gravada - Retiro por premio
-                igv_linea = 0
+                igv_value = "0"
+                precio_unitario = line.price_unit
             elif not line.tax_ids:
-                tipo_de_igv = 30  # Inafecto - Operación Onerosa
-                igv_linea = 0
+                # Inafecto - Sin impuestos
+                tipo_de_igv = 9  # Inafecto - Operación Onerosa
+                igv_value = "0"
+                precio_unitario = line.price_unit
             elif igv_linea > 0.01:
-                tipo_de_igv = 10  # Gravado - Operación Onerosa
+                # Gravado - Con IGV
+                tipo_de_igv = 1  # Gravado - Operación Onerosa
+                igv_value = round(igv_linea, 2)
+                # precio_unitario = valor_unitario + IGV
+                precio_unitario = line.price_total / line.quantity if line.quantity > 0 else line.price_unit
             else:
-                tipo_de_igv = 20  # Exonerado - Operación Onerosa
-                igv_linea = 0
-            
-            # Calcular precio unitario con impuestos
-            precio_unitario = line.price_total / line.quantity if line.quantity > 0 else line.price_unit
+                # Exonerado - Tiene tax_ids pero IGV = 0
+                tipo_de_igv = 8  # Exonerado - Operación Onerosa
+                igv_value = "0"
+                precio_unitario = line.price_unit  # Sin IGV
             
             item = {
                 "unidad_de_medida": self._get_sunat_uom_code(line.product_uom_id),
@@ -421,7 +428,7 @@ class AccountMove(models.Model):
                 "descuento": "" if not line.discount else round(line.discount, 2),
                 "subtotal": round(line.price_subtotal, 2),
                 "tipo_de_igv": tipo_de_igv,
-                "igv": round(igv_linea, 2),
+                "igv": igv_value,
                 "total": round(line.price_total, 2),
                 "anticipo_regularizacion": False,
                 "anticipo_documento_serie": "",
