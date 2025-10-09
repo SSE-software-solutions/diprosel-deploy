@@ -84,100 +84,63 @@ def post_init_hook(env):
             '|', ('company_id', '=', company.id), ('company_id', '=', False)
         ], limit=1)
         
-        # Configurar diario de Factura con secuencia personalizada
+        # Configurar padding de las secuencias del diario de Factura
         if journal_factura:
-            _logger.info(f"Configurando secuencias para diario {journal_factura.name} (código: {journal_factura.code})")
+            _logger.info(f"Ajustando secuencias para diario {journal_factura.name} (código: {journal_factura.code})")
             
-            # Verificar si ya tiene secuencias asignadas
-            existing_seq = env['ir.sequence'].search([
-                ('code', '=', f'{journal_factura.code}.invoice'),
-                ('company_id', '=', company.id)
-            ], limit=1)
+            # Odoo 18 genera automáticamente secuencias basadas en el código del diario
+            # Necesitamos buscar y modificar esas secuencias para usar padding de 6 dígitos
             
-            if not existing_seq:
-                # Crear secuencias específicas basadas en el código del diario
-                # El prefijo será el código del diario + guion
-                sequence_invoice = env['ir.sequence'].sudo().create({
-                    'name': f'Secuencia {journal_factura.code}',
-                    'implementation': 'standard',
-                    'code': f'{journal_factura.code}.invoice',
-                    'prefix': f'{journal_factura.code}-',  # Prefijo basado en código del diario
-                    'padding': 6,  # 6 dígitos de padding
-                    'number_increment': 1,
-                    'number_next': 1,
-                    'use_date_range': False,
-                    'company_id': company.id,
-                })
+            # Buscar la secuencia de facturas (formato: YYYY/codigo/numero)
+            # En Odoo 18, las secuencias se llaman diferente
+            env.cr.commit()  # Asegurar que el diario esté guardado
+            
+            # Forzar la generación de secuencias si no existen
+            try:
+                # Buscar secuencias del diario por patrón de nombre
+                sequences = env['ir.sequence'].search([
+                    '|', 
+                    ('name', 'ilike', f'%{journal_factura.code}%'),
+                    ('prefix', 'like', f'{journal_factura.code}%'),
+                    ('company_id', '=', company.id)
+                ])
                 
-                sequence_refund = env['ir.sequence'].sudo().create({
-                    'name': f'Secuencia NC {journal_factura.code}',
-                    'implementation': 'standard',
-                    'code': f'{journal_factura.code}.refund',
-                    'prefix': f'FC{journal_factura.code[1:]}-',  # FC + los números del código
-                    'padding': 6,
-                    'number_increment': 1,
-                    'number_next': 1,
-                    'use_date_range': False,
-                    'company_id': company.id,
-                })
-                
-                # Asignar las secuencias al diario
-                journal_factura.write({
-                    'sequence_id': sequence_invoice.id,
-                    'refund_sequence_id': sequence_refund.id,
-                    'refund_sequence': True,
-                })
-                
-                _logger.info(f"✅ Diario {journal_factura.name} configurado con secuencia {sequence_invoice.prefix}######")
-            else:
-                _logger.info(f"Diario {journal_factura.name} ya tiene secuencias configuradas")
+                for seq in sequences:
+                    # Actualizar padding a 6 dígitos
+                    if seq.padding != 6:
+                        seq.sudo().write({'padding': 6})
+                        _logger.info(f"✅ Secuencia {seq.name} actualizada con padding de 6 dígitos")
+                        
+            except Exception as e:
+                _logger.warning(f"No se pudieron ajustar las secuencias automáticamente: {e}")
+            
+            _logger.info(f"Diario {journal_factura.name} configurado")
         
-        # Configurar diario de Boleta con secuencia personalizada
+        # Configurar padding de las secuencias del diario de Boleta
         if journal_boleta:
-            _logger.info(f"Configurando secuencias para diario {journal_boleta.name} (código: {journal_boleta.code})")
+            _logger.info(f"Ajustando secuencias para diario {journal_boleta.name} (código: {journal_boleta.code})")
             
-            # Verificar si ya tiene secuencias asignadas
-            existing_seq = env['ir.sequence'].search([
-                ('code', '=', f'{journal_boleta.code}.invoice'),
-                ('company_id', '=', company.id)
-            ], limit=1)
+            env.cr.commit()  # Asegurar que el diario esté guardado
             
-            if not existing_seq:
-                # Crear secuencias específicas basadas en el código del diario
-                sequence_invoice = env['ir.sequence'].sudo().create({
-                    'name': f'Secuencia {journal_boleta.code}',
-                    'implementation': 'standard',
-                    'code': f'{journal_boleta.code}.invoice',
-                    'prefix': f'{journal_boleta.code}-',  # Prefijo basado en código del diario
-                    'padding': 6,  # 6 dígitos de padding
-                    'number_increment': 1,
-                    'number_next': 1,
-                    'use_date_range': False,
-                    'company_id': company.id,
-                })
+            # Buscar y ajustar secuencias del diario de Boleta
+            try:
+                sequences = env['ir.sequence'].search([
+                    '|', 
+                    ('name', 'ilike', f'%{journal_boleta.code}%'),
+                    ('prefix', 'like', f'{journal_boleta.code}%'),
+                    ('company_id', '=', company.id)
+                ])
                 
-                sequence_refund = env['ir.sequence'].sudo().create({
-                    'name': f'Secuencia NC {journal_boleta.code}',
-                    'implementation': 'standard',
-                    'code': f'{journal_boleta.code}.refund',
-                    'prefix': f'BC{journal_boleta.code[1:]}-',  # BC + los números del código
-                    'padding': 6,
-                    'number_increment': 1,
-                    'number_next': 1,
-                    'use_date_range': False,
-                    'company_id': company.id,
-                })
-                
-                # Asignar las secuencias al diario
-                journal_boleta.write({
-                    'sequence_id': sequence_invoice.id,
-                    'refund_sequence_id': sequence_refund.id,
-                    'refund_sequence': True,
-                })
-                
-                _logger.info(f"✅ Diario {journal_boleta.name} configurado con secuencia {sequence_invoice.prefix}######")
-            else:
-                _logger.info(f"Diario {journal_boleta.name} ya tiene secuencias configuradas")
+                for seq in sequences:
+                    # Actualizar padding a 6 dígitos
+                    if seq.padding != 6:
+                        seq.sudo().write({'padding': 6})
+                        _logger.info(f"✅ Secuencia {seq.name} actualizada con padding de 6 dígitos")
+                        
+            except Exception as e:
+                _logger.warning(f"No se pudieron ajustar las secuencias automáticamente: {e}")
+            
+            _logger.info(f"Diario {journal_boleta.name} configurado")
     
     _logger.info("✅ Configuración de diarios electrónicos completada")
 
