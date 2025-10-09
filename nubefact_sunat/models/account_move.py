@@ -195,6 +195,83 @@ class AccountMove(models.Model):
         else:
             return 1  # Por defecto factura
     
+    def _get_sunat_uom_code(self, uom):
+        """
+        Mapea la unidad de medida de Odoo al código SUNAT (Catálogo 03)
+        """
+        if not uom:
+            return 'NIU'
+        
+        # Mapeo de unidades comunes
+        uom_map = {
+            # Unidades
+            'unit': 'NIU',
+            'unidad': 'NIU',
+            'unidades': 'NIU',
+            'units': 'NIU',
+            'u': 'NIU',
+            
+            # Peso
+            'kg': 'KGM',
+            'kilogramo': 'KGM',
+            'kilogramos': 'KGM',
+            'g': 'GRM',
+            'gramo': 'GRM',
+            'gramos': 'GRM',
+            'ton': 'TNE',
+            'tonelada': 'TNE',
+            'lb': 'LBR',
+            'libra': 'LBR',
+            
+            # Longitud
+            'm': 'MTR',
+            'metro': 'MTR',
+            'metros': 'MTR',
+            'cm': 'CMT',
+            'centimetro': 'CMT',
+            'centimetros': 'CMT',
+            'mm': 'MMT',
+            'milimetro': 'MMT',
+            'milimetros': 'MMT',
+            
+            # Volumen
+            'l': 'LTR',
+            'litro': 'LTR',
+            'litros': 'LTR',
+            'ml': 'MLT',
+            'mililitro': 'MLT',
+            'mililitros': 'MLT',
+            'gal': 'GLL',
+            'galon': 'GLL',
+            
+            # Cantidad
+            'docena': 'DZN',
+            'docenas': 'DZN',
+            'caja': 'BX',
+            'cajas': 'BX',
+            'paquete': 'PK',
+            'paquetes': 'PK',
+            'pack': 'PK',
+            'bolsa': 'BG',
+            'bolsas': 'BG',
+            
+            # Servicios
+            'servicio': 'ZZ',
+            'servicios': 'ZZ',
+            'hora': 'HUR',
+            'horas': 'HUR',
+            'dia': 'DAY',
+            'dias': 'DAY',
+            'mes': 'MON',
+            'meses': 'MON',
+        }
+        
+        # Normalizar el nombre de la unidad
+        uom_name = uom.name.lower().strip()
+        
+        # Buscar en el mapeo
+        return uom_map.get(uom_name, 'NIU')  # Por defecto NIU si no se encuentra
+    
     def _prepare_nubefact_invoice_data(self):
         """Prepara los datos de la factura para enviar a NubeFact"""
         self.ensure_one()
@@ -223,7 +300,7 @@ class AccountMove(models.Model):
             igv_linea = line.price_total - line.price_subtotal
             
             item = {
-                "unidad_de_medida": line.product_uom_id.name[:3].upper() if line.product_uom_id else "NIU",
+                "unidad_de_medida": self._get_sunat_uom_code(line.product_uom_id),
                 "codigo": line.product_id.default_code or str(line.product_id.id),
                 "descripcion": line.name[:250],  # Máximo 250 caracteres
                 "cantidad": round(line.quantity, 10),
