@@ -118,45 +118,39 @@ class AccountMove(models.Model):
                 record.serie_comprobante = False
                 record.numero_comprobante = False
     
-    def _get_starting_sequence(self):
-        """Override para usar secuencias peruanas según el tipo de cliente"""
-        self.ensure_one()
+    @api.model_create_multi
+    def create(self, vals_list):
+        """Override para asignar el diario correcto según el tipo de cliente"""
+        for vals in vals_list:
+            # Solo aplicar para facturas de venta nuevas sin diario específico
+            if vals.get('move_type') in ['out_invoice', 'out_refund'] and vals.get('partner_id'):
+                # Obtener el partner
+                partner = self.env['res.partner'].browse(vals['partner_id'])
+                
+                # Solo para compañías peruanas
+                if self.env.company.country_code == 'PE':
+                    # Determinar tipo de documento
+                    tipo_doc = self._get_tipo_documento_identidad(partner)
+                    
+                    # Buscar el diario apropiado solo si no se especificó uno
+                    if not vals.get('journal_id'):
+                        if tipo_doc == '6':  # RUC - Factura
+                            journal = self.env['account.journal'].search([
+                                ('name', '=', 'Factura'),
+                                ('type', '=', 'sale'),
+                                ('company_id', '=', self.env.company.id)
+                            ], limit=1)
+                        else:  # DNI u otros - Boleta
+                            journal = self.env['account.journal'].search([
+                                ('name', '=', 'Boleta'),
+                                ('type', '=', 'sale'),
+                                ('company_id', '=', self.env.company.id)
+                            ], limit=1)
+                        
+                        if journal:
+                            vals['journal_id'] = journal.id
         
-        # Solo aplicar para compañías peruanas
-        if self.company_id.country_code != 'PE':
-            return super()._get_starting_sequence()
-        
-        # Solo para facturas de cliente
-        if self.move_type not in ['out_invoice', 'out_refund']:
-            return super()._get_starting_sequence()
-        
-        # Determinar la serie según el tipo de documento del cliente
-        tipo_doc = self._get_tipo_documento_identidad(self.partner_id)
-        
-        if self.move_type == 'out_invoice':
-            # RUC = Factura, otros = Boleta
-            if tipo_doc == '6':  # RUC
-                sequence_code = 'account.move.invoice.pe'
-            else:
-                sequence_code = 'account.move.boleta.pe'
-        elif self.move_type == 'out_refund':
-            sequence_code = 'account.move.credit_note.pe'
-        else:
-            return super()._get_starting_sequence()
-        
-        # Buscar la secuencia
-        sequence = self.env['ir.sequence'].search([
-            ('code', '=', sequence_code),
-            ('company_id', 'in', [self.company_id.id, False])
-        ], limit=1)
-        
-        if sequence:
-            # Extraer la serie del prefix
-            if sequence.prefix:
-                self.l10n_pe_edi_serie = sequence.prefix.rstrip('-')
-            return sequence._get_current_sequence().prefix + '%(range_year)s' if sequence.use_date_range else sequence._get_current_sequence().prefix
-        
-        return super()._get_starting_sequence()
+        return super().create(vals_list)
     
     def _get_tipo_documento_identidad(self, partner):
         """Mapea el tipo de documento de identidad para SUNAT"""
