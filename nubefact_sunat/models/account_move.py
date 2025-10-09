@@ -174,7 +174,7 @@ class AccountMove(models.Model):
     
     @api.model_create_multi
     def create(self, vals_list):
-        """Override para asignar el diario correcto según el tipo de cliente"""
+        """Override para asignar el diario y secuencia correcta según el tipo de cliente"""
         for vals in vals_list:
             # Solo aplicar para facturas de venta nuevas
             if vals.get('move_type') in ['out_invoice', 'out_refund'] and vals.get('partner_id'):
@@ -204,18 +204,18 @@ class AccountMove(models.Model):
                         if journal:
                             vals['journal_id'] = journal.id
                     
-                    # Asignar la secuencia correcta del módulo nubefact
-                    # Obtener el diario (ya sea del vals o el que acabamos de asignar)
-                    journal_id = vals.get('journal_id')
-                    if journal_id:
-                        journal = self.env['account.journal'].browse(journal_id)
-                        # Obtener o crear la secuencia correcta
-                        sequence = self._get_or_create_pe_sequence(journal, tipo_doc)
-                        
-                        # Asignar la secuencia al diario si no la tiene
-                        if journal.sequence_id != sequence:
-                            journal.sudo().write({'sequence_id': sequence.id})
-                            _logger.info(f"✅ Diario {journal.name} actualizado con secuencia {sequence.name}")
+                    # Asignar el nombre de factura usando la secuencia correcta del módulo nubefact
+                    # Solo si no tiene nombre o tiene el nombre temporal '/'
+                    if not vals.get('name') or vals.get('name') == '/':
+                        journal_id = vals.get('journal_id')
+                        if journal_id:
+                            journal = self.env['account.journal'].browse(journal_id)
+                            # Obtener o crear la secuencia correcta
+                            sequence = self._get_or_create_pe_sequence(journal, tipo_doc)
+                            
+                            # Generar el siguiente número usando la secuencia
+                            vals['name'] = sequence.next_by_id()
+                            _logger.info(f"✅ Asignado número de factura: {vals['name']} usando secuencia {sequence.name}")
         
         return super().create(vals_list)
     
