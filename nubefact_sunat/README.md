@@ -5,17 +5,25 @@ Módulo de integración con NubeFact para envío de comprobantes electrónicos a
 ## Características
 
 ✅ **Secuencias automáticas** con formato SUNAT (F001-000001, B001-000001)  
+✅ **Diarios pre-configurados** para Factura y Boleta (funciona con POS)  
 ✅ **Detección automática** de Factura/Boleta según tipo de documento del cliente  
 ✅ Envío de Facturas, Boletas, Notas de Crédito y Débito  
 ✅ Consulta de estado en SUNAT  
 ✅ Descarga de PDF, XML y CDR  
 ✅ Registro completo de respuestas de SUNAT  
+✅ **Compatible con Punto de Venta (POS)**  
 
 ## Instalación
 
 1. Copiar el módulo a la carpeta de addons de Odoo
 2. Actualizar lista de aplicaciones
 3. Instalar el módulo "Facturación Electrónica SUNAT - NubeFact"
+
+**Al instalar, el módulo creará automáticamente:**
+- ✅ Diario **"Factura"** (código FE) con secuencia F001-000001
+- ✅ Diario **"Boleta"** (código BE) con secuencia B001-000001
+- ✅ Secuencias para Notas de Crédito y Débito
+- ✅ Menú de configuración de series
 
 ## Configuración Inicial
 
@@ -30,18 +38,26 @@ Módulo de integración con NubeFact para envío de comprobantes electrónicos a
 
 ### 2. Configurar Series de Documentos Electrónicos
 
-El módulo crea automáticamente las siguientes series por defecto:
+El módulo crea automáticamente las siguientes series y diarios:
+
+**Diarios Creados:**
+- 📄 **Factura (FE)**: Para clientes con RUC → Serie F001-000001
+- 📄 **Boleta (BE)**: Para clientes con DNI → Serie B001-000001
+
+**Secuencias Creadas:**
 - **F001**: Facturas Electrónicas
 - **B001**: Boletas de Venta
 - **FC01**: Notas de Crédito
 - **FD01**: Notas de Débito
 
-Para modificar o agregar nuevas series:
+Para modificar series o correlativos:
 
 1. Ir a: **Contabilidad → Configuración → Series Electrónicas**
 2. Editar la secuencia deseada
 3. Modificar el **Prefijo** (debe ser formato SUNAT: F001, B001, etc.)
 4. Configurar el **Siguiente Número** según tu correlativo actual
+
+**Nota:** Los diarios de Factura y Boleta ya están vinculados a las secuencias correctas, por lo que **funcionan automáticamente en POS y facturación normal**.
 
 ### 3. Configurar Tipo de Documento en Clientes
 
@@ -54,15 +70,26 @@ Para que el sistema detecte automáticamente si emitir Factura o Boleta:
 
 ## Uso
 
-### Enviar Comprobante a SUNAT
+### Enviar Comprobante a SUNAT (Facturación Normal)
 
-1. Crear y confirmar una factura/boleta
-2. El sistema asignará automáticamente la serie correcta:
-   - Clientes con RUC → Serie F001-000001 (Factura)
-   - Clientes con DNI → Serie B001-000001 (Boleta)
+1. Crear y confirmar una factura/boleta desde **Contabilidad → Clientes → Facturas**
+2. Seleccionar el diario según el cliente:
+   - Clientes con RUC → Diario **"Factura"** → Serie F001-000001
+   - Clientes con DNI → Diario **"Boleta"** → Serie B001-000001
 3. Hacer clic en **"Enviar a SUNAT"**
 4. El sistema enviará el comprobante a NubeFact
 5. Verificar el estado en el badge superior derecho
+
+### Enviar Comprobante desde POS
+
+**Requisito:** Instalar también el módulo `custom_pos_journal_v3` para selección automática de diarios en POS.
+
+1. Crear venta en **Punto de Venta**
+2. Al facturar:
+   - Si cliente tiene **RUC** → Usa diario "Factura" (F001)
+   - Si cliente tiene **DNI** → Usa diario "Boleta" (B001)
+3. La factura se crea automáticamente con la serie correcta
+4. Ir a la factura generada y hacer clic en **"Enviar a SUNAT"**
 
 ### Consultar Estado en SUNAT
 
@@ -117,6 +144,46 @@ El módulo detecta automáticamente el tipo de comprobante a emitir:
 - 🟢 **Aceptado por SUNAT**: Comprobante válido y aceptado
 - 🔴 **Rechazado por SUNAT**: Revisar mensaje de error
 - ⚫ **Error al Enviar**: Error en la comunicación
+
+## Integración con Punto de Venta (POS)
+
+### Módulos Necesarios
+
+Para que funcione correctamente con POS, necesitas **ambos módulos**:
+
+1. ✅ **nubefact_sunat** (este módulo) - Crea diarios y secuencias
+2. ✅ **custom_pos_journal_v3** - Selecciona automáticamente el diario según cliente
+
+### Flujo Completo en POS
+
+```
+Cliente entra al POS
+    ↓
+Cliente tiene RUC?
+    ├─ SÍ  → custom_pos_journal_v3 selecciona diario "Factura"
+    │         ↓
+    │         Diario "Factura" usa secuencia F001-000001
+    │         ↓
+    │         nubefact_sunat envía a SUNAT
+    │
+    └─ NO  → custom_pos_journal_v3 selecciona diario "Boleta"
+              ↓
+              Diario "Boleta" usa secuencia B001-000001
+              ↓
+              nubefact_sunat envía a SUNAT
+```
+
+### Verificación de Configuración
+
+Después de instalar ambos módulos:
+
+1. Ir a: **Contabilidad → Configuración → Diarios**
+2. Verificar que existan:
+   - ✅ Diario **"Factura"** (código FE)
+   - ✅ Diario **"Boleta"** (código BE)
+3. Abrir cada diario y verificar en **"Configuración Avanzada"**:
+   - Debe tener secuencia configurada
+   - El prefijo debe ser F001- o B001- respectivamente
 
 ## Solución de Problemas
 
