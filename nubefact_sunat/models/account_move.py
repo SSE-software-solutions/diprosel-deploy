@@ -514,6 +514,113 @@ class AccountMove(models.Model):
         
         return data
     
+    def action_send_to_sunat_massive(self):
+        """Acción para enviar múltiples comprobantes a SUNAT"""
+        # Enviar cada factura seleccionada
+        success_count = 0
+        error_count = 0
+        errors = []
+        
+        for record in self:
+            try:
+                # Validaciones básicas
+                if record.state != 'posted':
+                    errors.append(f"{record.name}: No está confirmada")
+                    error_count += 1
+                    continue
+                
+                if record.sunat_enviado and record.sunat_estado == 'accepted':
+                    errors.append(f"{record.name}: Ya fue aceptada por SUNAT")
+                    error_count += 1
+                    continue
+                
+                # Intentar enviar
+                record.action_send_to_sunat()
+                success_count += 1
+                
+            except Exception as e:
+                errors.append(f"{record.name}: {str(e)}")
+                error_count += 1
+        
+        # Mostrar resultado
+        message = f"✅ Enviadas: {success_count}"
+        if error_count > 0:
+            message += f"\n❌ Errores: {error_count}"
+            if errors:
+                message += "\n\nDetalles:\n" + "\n".join(errors[:10])  # Mostrar máximo 10 errores
+        
+        return {
+            'type': 'ir.actions.client',
+            'tag': 'display_notification',
+            'params': {
+                'title': _('Envío Masivo a SUNAT'),
+                'message': message,
+                'type': 'success' if error_count == 0 else 'warning',
+                'sticky': True,
+            }
+        }
+    
+    def write(self, vals):
+        """Override write para enviar automáticamente a SUNAT cuando se paga"""
+        # Guardar estados previos de pago
+        old_payment_states = {record.id: record.payment_state for record in self}
+        
+        # Llamar al write original
+        result = super(AccountMove, self).write(vals)
+        
+        # Detectar cambios en el estado de pago
+        if 'payment_state' in vals or 'amount_residual' in vals:
+            for record in self:
+                old_state = old_payment_states.get(record.id)
+                # Si cambió a "pagado" o "en proceso de pago"
+                if old_state != 'paid' and record.payment_state == 'paid':
+                    # Enviar automáticamente a SUNAT
+                    record._auto_send_to_sunat_on_payment()
+        
+        return result
+    
+    def _auto_send_to_sunat_on_payment(self):
+        """Envío automático a SUNAT cuando se registra el pago (1 intento)"""
+        self.ensure_one()
+        
+        # Solo para compañías peruanas
+        if self.company_id.country_code != 'PE':
+            return
+        
+        # Solo para facturas y boletas de venta
+        if self.move_type not in ['out_invoice', 'out_refund']:
+            return
+        
+        # Solo si está confirmada
+        if self.state != 'posted':
+            return
+        
+        # Solo si NO ha sido enviada antes
+        if self.sunat_enviado:
+            return
+        
+        # Verificar que haya configuración de NubeFact
+        config = self.env['nubefact.config'].search([
+            ('company_id', '=', self.company_id.id),
+            ('active', '=', True)
+        ], limit=1)
+        
+        if not config:
+            _logger.warning(f"No hay configuración de NubeFact para enviar automáticamente {self.name}")
+            return
+        
+        # Intentar enviar (1 solo intento, sin lanzar error)
+        try:
+            _logger.info(f"🤖 Enviando automáticamente a SUNAT: {self.name}")
+            self.action_send_to_sunat()
+        except Exception as e:
+            # Registrar el error pero no fallar el pago
+            _logger.error(f"Error al enviar automáticamente {self.name} a SUNAT: {str(e)}")
+            self.sudo().write({
+                'sunat_estado': 'error',
+                'sunat_error_message': f"Error en envío automático: {str(e)}"
+            })
+    
     def action_send_to_sunat(self):
         """Acción para enviar el comprobante a SUNAT mediante NubeFact"""
         self.ensure_one()
