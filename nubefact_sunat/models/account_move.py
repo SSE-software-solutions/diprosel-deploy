@@ -375,61 +375,67 @@ class AccountMove(models.Model):
                 total_gratuita += line.price_subtotal
                 continue
             
-            # Filtrar solo impuestos de tipo IGV (excluir tributos especiales)
-            igv_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA'] and t.amount > 0)
-            exo_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA', 'EXO'] and t.amount == 0)
+            # Usar el código de afectación de SUNAT si está disponible (localización peruana)
+            # Esto identifica correctamente gravado/exonerado/inafecto
+            afectacion_igv = None
+            if line.tax_ids:
+                for tax in line.tax_ids:
+                    # Buscar el código de afectación PE
+                    if hasattr(tax, 'l10n_pe_edi_tax_code'):
+                        tax_code = tax.l10n_pe_edi_tax_code
+                        # Solo considerar IGV (1000), no ICBPER (7152) ni otros tributos
+                        if tax_code == '1000':
+                            afectacion_igv = getattr(tax, 'l10n_pe_edi_unece_category', None)
+                            if afectacion_igv:
+                                break
             
-            if igv_taxes:
-                # Línea con IGV (gravada) - tiene impuesto IGV mayor a 0%
-                total_gravada += line.price_subtotal
-                # Calcular solo el IGV, ignorando otros tributos
-                for tax in igv_taxes:
-                    total_igv += line.price_subtotal * (tax.amount / 100)
-            elif exo_taxes or (line.tax_ids and not igv_taxes):
-                # Línea con impuesto 0% o con nombre que indica exonerado (exonerada)
-                total_exonerada += line.price_subtotal
-            else:
-                # Línea sin impuestos (inafecta)
+            # Determinar tipo de línea según afectación o características del impuesto
+            if not line.tax_ids:
+                # Sin impuestos = Inafecto
                 total_inafecta += line.price_subtotal
+            else:
+                # Tiene impuestos, determinar si es gravado o exonerado
+                # Calcular IGV de la línea usando los totales que Odoo ya calculó
+                igv_linea = line.price_total - line.price_subtotal
+                
+                if igv_linea > 0.01:  # Tiene IGV (gravada)
+                    total_gravada += line.price_subtotal
+                    total_igv += igv_linea
+                else:
+                    # IGV = 0, es exonerada
+                    total_exonerada += line.price_subtotal
         
         total = self.amount_total
         
         # Preparar items
         items = []
         for idx, line in enumerate(self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'), start=1):
-            # Filtrar solo impuestos de tipo IGV (excluir tributos especiales como ICBPER, ISC, etc.)
-            igv_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA'] and t.amount > 0)
-            exo_taxes = line.tax_ids.filtered(lambda t: t.tax_group_id.name in ['IGV', 'IVA', 'EXO'] and t.amount == 0)
+            # Usar los totales que Odoo ya calculó correctamente
+            # price_subtotal = subtotal sin impuestos
+            # price_total = total con todos los impuestos
+            igv_linea = line.price_total - line.price_subtotal
             
-            # Calcular solo el IGV (ignorando otros tributos)
-            igv_linea = 0.0
-            igv_rate = 0.0
+            # Determinar el tipo de afectación del IGV
+            tipo_de_igv = 10  # Por defecto: Gravado - Operación Onerosa
             
-            if igv_taxes:
-                # Solo calcular el IGV, no otros tributos
-                for tax in igv_taxes:
-                    igv_linea += line.price_subtotal * (tax.amount / 100)
-                    igv_rate = tax.amount  # Usar la tasa del primer IGV encontrado
-            
-            # Determinar el tipo de afectación del IGV según el impuesto
             # Verificar si es gratuito
             if line.price_unit == 0:
                 tipo_de_igv = 11  # Gravada - Retiro por premio
                 igv_linea = 0
-            elif igv_taxes:
-                # IGV 18% u otro porcentaje mayor a 0
-                tipo_de_igv = 10  # Gravado - Operación Onerosa
-            elif exo_taxes or (line.tax_ids and not igv_taxes):
-                # Impuesto con tasa 0% o tributo especial - Exonerado
-                tipo_de_igv = 20  # Exonerado - Operación Onerosa
-                igv_linea = 0  # Asegurar que IGV sea 0
-            else:
+            elif not line.tax_ids:
                 # Sin impuestos - Inafecto
                 tipo_de_igv = 30  # Inafecto - Operación Onerosa
-                igv_linea = 0  # Asegurar que IGV sea 0
+                igv_linea = 0
+            elif igv_linea < 0.01:
+                # Tiene impuesto pero IGV = 0 - Exonerado
+                tipo_de_igv = 20  # Exonerado - Operación Onerosa
+                igv_linea = 0
+            else:
+                # Tiene IGV - Gravado
+                tipo_de_igv = 10  # Gravado - Operación Onerosa
             
-            # Calcular precio unitario con IGV (solo si tiene IGV)
-            precio_con_igv = line.price_unit * (1 + (igv_rate / 100)) if igv_rate > 0 else line.price_unit
+            # Calcular precio unitario incluyendo impuestos (si los tiene)
+            precio_unitario = line.price_total / line.quantity if line.quantity else line.price_unit
             
             item = {
                 "unidad_de_medida": self._get_sunat_uom_code(line.product_uom_id),
@@ -437,12 +443,12 @@ class AccountMove(models.Model):
                 "descripcion": line.name[:250],  # Máximo 250 caracteres
                 "cantidad": round(line.quantity, 10),
                 "valor_unitario": round(line.price_unit, 10),
-                "precio_unitario": round(precio_con_igv, 10),
+                "precio_unitario": round(precio_unitario, 10),
                 "descuento": "" if not line.discount else round(line.discount, 2),
                 "subtotal": round(line.price_subtotal, 2),
                 "tipo_de_igv": tipo_de_igv,
                 "igv": round(igv_linea, 2),
-                "total": round(line.price_subtotal + igv_linea, 2),
+                "total": round(line.price_total, 2),
                 "anticipo_regularizacion": False,
                 "anticipo_documento_serie": "",
                 "anticipo_documento_numero": ""
@@ -561,9 +567,9 @@ class AccountMove(models.Model):
                 'Content-Type': 'application/json'
             }
             
-            _logger.info(f"Enviando factura {self.name} a NubeFact")
-            _logger.debug(f"URL: {url}")
-            _logger.debug(f"Datos: {json.dumps(invoice_data, indent=2)}")
+            _logger.info(f"📤 Enviando factura {self.name} a NubeFact")
+            _logger.info(f"URL: {url}")
+            _logger.info(f"📋 Datos completos enviados a NubeFact:\n{json.dumps(invoice_data, indent=2, ensure_ascii=False)}")
             
             # Realizar petición POST a NubeFact
             response = requests.post(
