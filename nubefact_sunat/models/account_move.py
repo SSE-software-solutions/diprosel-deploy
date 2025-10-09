@@ -1,11 +1,12 @@
 # -*- coding: utf-8 -*-
 
-from odoo import api, fields, models, _
-from odoo.exceptions import UserError, ValidationError
-import requests
+import logging
 import json
 import base64
-import logging
+import requests
+
+from odoo import api, fields, models, _
+from odoo.exceptions import UserError, ValidationError
 
 _logger = logging.getLogger(__name__)
 
@@ -118,6 +119,27 @@ class AccountMove(models.Model):
                 record.serie_comprobante = False
                 record.numero_comprobante = False
     
+    def _fix_sequence_padding(self, journal):
+        """Ajusta el padding de las secuencias del diario a 6 dígitos"""
+        if not journal:
+            return
+        
+        # Buscar secuencias relacionadas con el diario
+        sequences = self.env['ir.sequence'].search([
+            '|', '|',
+            ('name', 'ilike', journal.code),
+            ('prefix', 'like', f'{journal.code}%'),
+            ('code', 'like', f'{journal.code}%'),
+        ])
+        
+        for seq in sequences:
+            if seq.padding != 6:
+                try:
+                    seq.sudo().write({'padding': 6})
+                    _logger.info(f"✅ Secuencia {seq.name} ajustada a padding de 6 dígitos")
+                except Exception as e:
+                    _logger.warning(f"No se pudo ajustar secuencia {seq.name}: {e}")
+    
     @api.model_create_multi
     def create(self, vals_list):
         """Override para asignar el diario correcto según el tipo de cliente"""
@@ -149,6 +171,8 @@ class AccountMove(models.Model):
                         
                         if journal:
                             vals['journal_id'] = journal.id
+                            # Ajustar padding de secuencias al primer uso
+                            self._fix_sequence_padding(journal)
         
         return super().create(vals_list)
     
@@ -167,10 +191,17 @@ class AccountMove(models.Model):
         
         # Fallback: determinar por el VAT si es RUC (11 dígitos) o DNI (8 dígitos)
         if partner.vat:
-            if len(partner.vat) == 11 and partner.vat.startswith('20'):
-                return '6'  # RUC
-            elif len(partner.vat) == 8:
+            vat_clean = partner.vat.strip()
+            
+            # RUC: 11 dígitos, empieza con 10 (persona) o 20 (empresa)
+            if len(vat_clean) == 11 and (vat_clean.startswith('10') or vat_clean.startswith('20')):
+                return '6'  # RUC (tipo de documento SUNAT)
+            # DNI: 8 dígitos
+            elif len(vat_clean) == 8:
                 return '1'  # DNI
+            # Carnet de Extranjería: 12 caracteres alfanuméricos
+            elif len(vat_clean) == 12:
+                return '4'  # Carnet de Extranjería
         
         return '0'  # Sin documento
     
@@ -283,21 +314,58 @@ class AccountMove(models.Model):
         if not self.partner_id.vat:
             raise UserError(_('El cliente debe tener un número de documento (RUC/DNI).'))
         
-        # Calcular totales
-        base_imponible = sum(line.price_subtotal for line in self.invoice_line_ids if line.tax_ids)
-        igv = sum(line.price_total - line.price_subtotal for line in self.invoice_line_ids if line.tax_ids)
+        # Validar que haya líneas de producto
+        product_lines = self.invoice_line_ids.filtered(lambda l: l.display_type == 'product')
+        if not product_lines:
+            raise UserError(_('La factura debe tener al menos un producto o servicio.'))
+        
+        # Calcular totales separando líneas gravadas, exoneradas e inafectas
+        total_gravada = 0.0
+        total_exonerada = 0.0
+        total_inafecta = 0.0
+        total_igv = 0.0
+        
+        for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
+            if line.tax_ids:
+                # Obtener la tasa del primer impuesto
+                tax_rate = line.tax_ids[0].amount if line.tax_ids else 0
+                
+                if tax_rate > 0:
+                    # Línea con IGV (gravada) - tasa mayor a 0%
+                    total_gravada += line.price_subtotal
+                    total_igv += (line.price_total - line.price_subtotal)
+                else:
+                    # Línea con impuesto 0% (exonerada)
+                    total_exonerada += line.price_subtotal
+            else:
+                # Línea sin impuestos (inafecta)
+                total_inafecta += line.price_subtotal
+        
         total = self.amount_total
         
         # Preparar items
         items = []
         for idx, line in enumerate(self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'), start=1):
-            # Determinar el código de impuesto (IGV = 10)
-            codigo_tipo_precio = '01'  # Precio unitario incluye IGV
-            if not line.tax_ids:
-                codigo_tipo_precio = '02'  # Precio unitario no incluye IGV
-            
             # Calcular IGV de la línea
             igv_linea = line.price_total - line.price_subtotal
+            
+            # Determinar el tipo de afectación del IGV según el impuesto
+            tipo_de_igv = 10  # Por defecto: Gravado - Operación Onerosa
+            
+            if line.tax_ids:
+                tax_rate = line.tax_ids[0].amount if line.tax_ids else 0
+                
+                if tax_rate > 0:
+                    # IGV 18% u otro porcentaje mayor a 0
+                    tipo_de_igv = 10  # Gravado - Operación Onerosa
+                else:
+                    # Impuesto con tasa 0% - Exonerado
+                    tipo_de_igv = 20  # Exonerado - Operación Onerosa
+                    igv_linea = 0  # Asegurar que IGV sea 0
+            else:
+                # Sin impuestos - Inafecto
+                tipo_de_igv = 30  # Inafecto - Operación Onerosa
+                igv_linea = 0  # Asegurar que IGV sea 0
             
             item = {
                 "unidad_de_medida": self._get_sunat_uom_code(line.product_uom_id),
@@ -308,7 +376,7 @@ class AccountMove(models.Model):
                 "precio_unitario": round(line.price_unit * (1 + (line.tax_ids[0].amount / 100 if line.tax_ids else 0)), 10),
                 "descuento": "" if not line.discount else round(line.discount, 2),
                 "subtotal": round(line.price_subtotal, 2),
-                "tipo_de_igv": 1 if line.tax_ids else 8,  # 1=Gravado Operación Onerosa, 8=Exonerado
+                "tipo_de_igv": tipo_de_igv,
                 "igv": round(igv_linea, 2),
                 "total": round(line.price_total, 2),
                 "anticipo_regularizacion": False,
@@ -357,10 +425,10 @@ class AccountMove(models.Model):
             "descuento_global": "",
             "total_descuento": "",
             "total_anticipo": "",
-            "total_gravada": round(base_imponible, 2),
-            "total_inafecta": "",
-            "total_exonerada": "",
-            "total_igv": round(igv, 2),
+            "total_gravada": round(total_gravada, 2) if total_gravada > 0 else "",
+            "total_inafecta": round(total_inafecta, 2) if total_inafecta > 0 else "",
+            "total_exonerada": round(total_exonerada, 2) if total_exonerada > 0 else "",
+            "total_igv": round(total_igv, 2) if total_igv > 0 else "",
             "total_gratuita": "",
             "total_otros_cargos": "",
             "total": round(total, 2),

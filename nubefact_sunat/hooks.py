@@ -84,63 +84,15 @@ def post_init_hook(env):
             '|', ('company_id', '=', company.id), ('company_id', '=', False)
         ], limit=1)
         
-        # Configurar padding de las secuencias del diario de Factura
+        # Configurar diario de Factura
         if journal_factura:
-            _logger.info(f"Ajustando secuencias para diario {journal_factura.name} (código: {journal_factura.code})")
-            
-            # Odoo 18 genera automáticamente secuencias basadas en el código del diario
-            # Necesitamos buscar y modificar esas secuencias para usar padding de 6 dígitos
-            
-            # Buscar la secuencia de facturas (formato: YYYY/codigo/numero)
-            # En Odoo 18, las secuencias se llaman diferente
-            env.cr.commit()  # Asegurar que el diario esté guardado
-            
-            # Forzar la generación de secuencias si no existen
-            try:
-                # Buscar secuencias del diario por patrón de nombre
-                sequences = env['ir.sequence'].search([
-                    '|', 
-                    ('name', 'ilike', f'%{journal_factura.code}%'),
-                    ('prefix', 'like', f'{journal_factura.code}%'),
-                    ('company_id', '=', company.id)
-                ])
-                
-                for seq in sequences:
-                    # Actualizar padding a 6 dígitos
-                    if seq.padding != 6:
-                        seq.sudo().write({'padding': 6})
-                        _logger.info(f"✅ Secuencia {seq.name} actualizada con padding de 6 dígitos")
-                        
-            except Exception as e:
-                _logger.warning(f"No se pudieron ajustar las secuencias automáticamente: {e}")
-            
-            _logger.info(f"Diario {journal_factura.name} configurado")
+            _logger.info(f"✅ Diario {journal_factura.name} creado con código: {journal_factura.code}")
+            _logger.info("Las secuencias se ajustarán automáticamente al crear la primera factura")
         
-        # Configurar padding de las secuencias del diario de Boleta
+        # Configurar diario de Boleta
         if journal_boleta:
-            _logger.info(f"Ajustando secuencias para diario {journal_boleta.name} (código: {journal_boleta.code})")
-            
-            env.cr.commit()  # Asegurar que el diario esté guardado
-            
-            # Buscar y ajustar secuencias del diario de Boleta
-            try:
-                sequences = env['ir.sequence'].search([
-                    '|', 
-                    ('name', 'ilike', f'%{journal_boleta.code}%'),
-                    ('prefix', 'like', f'{journal_boleta.code}%'),
-                    ('company_id', '=', company.id)
-                ])
-                
-                for seq in sequences:
-                    # Actualizar padding a 6 dígitos
-                    if seq.padding != 6:
-                        seq.sudo().write({'padding': 6})
-                        _logger.info(f"✅ Secuencia {seq.name} actualizada con padding de 6 dígitos")
-                        
-            except Exception as e:
-                _logger.warning(f"No se pudieron ajustar las secuencias automáticamente: {e}")
-            
-            _logger.info(f"Diario {journal_boleta.name} configurado")
+            _logger.info(f"✅ Diario {journal_boleta.name} creado con código: {journal_boleta.code}")
+            _logger.info("Las secuencias se ajustarán automáticamente al crear la primera boleta")
     
     _logger.info("✅ Configuración de diarios electrónicos completada")
 
