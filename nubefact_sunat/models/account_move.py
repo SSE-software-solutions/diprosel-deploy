@@ -368,7 +368,6 @@ class AccountMove(models.Model):
         total_inafecta = 0.0
         total_gratuita = 0.0
         total_igv = 0.0
-        total_icbper = 0.0
         
         for line in self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'):
             # Verificar si es gratuito (precio unitario = 0)
@@ -376,42 +375,15 @@ class AccountMove(models.Model):
                 total_gratuita += line.price_subtotal
                 continue
             
-            # Separar IGV de otros tributos usando compute_all
-            igv_linea = 0.0
-            icbper_linea = 0.0
-            
-            if line.tax_ids:
-                taxes_res = line.tax_ids.compute_all(
-                    line.price_unit,
-                    currency=self.currency_id,
-                    quantity=line.quantity,
-                    product=line.product_id,
-                    partner=self.partner_id
-                )
-                
-                for tax_detail in taxes_res.get('taxes', []):
-                    tax_id = tax_detail.get('id')
-                    tax = self.env['account.tax'].browse(tax_id)
-                    tax_amount = tax_detail.get('amount', 0.0)
-                    
-                    # Identificar el tipo de tributo
-                    if hasattr(tax, 'l10n_pe_edi_tax_code'):
-                        if tax.l10n_pe_edi_tax_code == '1000':  # IGV
-                            igv_linea += tax_amount
-                        elif tax.l10n_pe_edi_tax_code == '7152':  # ICBPER
-                            icbper_linea += tax_amount
-                    elif 'ICBPER' in tax.name.upper() or 'BOLSA' in tax.name.upper():
-                        icbper_linea += tax_amount
-                    elif tax.tax_group_id.name in ['IGV', 'IVA']:
-                        igv_linea += tax_amount
+            # Usar totales que Odoo ya calculó
+            total_taxes = line.price_total - line.price_subtotal
             
             # Determinar tipo de línea
             if not line.tax_ids:
                 total_inafecta += line.price_subtotal
-            elif igv_linea > 0.01:
+            elif total_taxes > 0.01:
                 total_gravada += line.price_subtotal
-                total_igv += igv_linea
-                total_icbper += icbper_linea
+                total_igv += total_taxes
             else:
                 total_exonerada += line.price_subtotal
         
@@ -420,56 +392,24 @@ class AccountMove(models.Model):
         # Preparar items
         items = []
         for idx, line in enumerate(self.invoice_line_ids.filtered(lambda l: l.display_type == 'product'), start=1):
-            # Separar IGV de ICBPER
-            igv_linea = 0.0
-            icbper_linea = 0.0
-            
-            if line.tax_ids:
-                taxes_res = line.tax_ids.compute_all(
-                    line.price_unit,
-                    currency=self.currency_id,
-                    quantity=line.quantity,
-                    product=line.product_id,
-                    partner=self.partner_id
-                )
-                
-                for tax_detail in taxes_res.get('taxes', []):
-                    tax_id = tax_detail.get('id')
-                    tax = self.env['account.tax'].browse(tax_id)
-                    tax_amount = tax_detail.get('amount', 0.0)
-                    
-                    # Identificar el tipo de tributo
-                    if hasattr(tax, 'l10n_pe_edi_tax_code'):
-                        if tax.l10n_pe_edi_tax_code == '1000':  # IGV
-                            igv_linea += tax_amount
-                        elif tax.l10n_pe_edi_tax_code == '7152':  # ICBPER
-                            icbper_linea += tax_amount
-                    elif 'ICBPER' in tax.name.upper() or 'BOLSA' in tax.name.upper():
-                        icbper_linea += tax_amount
-                    elif tax.tax_group_id.name in ['IGV', 'IVA']:
-                        igv_linea += tax_amount
+            # Usar totales que Odoo ya calculó
+            igv_linea = line.price_total - line.price_subtotal
             
             # Determinar el tipo de afectación del IGV
             if line.price_unit == 0:
                 tipo_de_igv = 11  # Gravada - Retiro por premio
                 igv_linea = 0
-                icbper_linea = 0
             elif not line.tax_ids:
                 tipo_de_igv = 30  # Inafecto - Operación Onerosa
                 igv_linea = 0
-                icbper_linea = 0
             elif igv_linea > 0.01:
                 tipo_de_igv = 10  # Gravado - Operación Onerosa
             else:
                 tipo_de_igv = 20  # Exonerado - Operación Onerosa
                 igv_linea = 0
-                icbper_linea = 0
             
-            # Calcular precio unitario con IGV (sin ICBPER)
-            precio_unitario = line.price_unit + (igv_linea / line.quantity) if line.quantity > 0 else line.price_unit
-            
-            # Total del item: subtotal + IGV + ICBPER
-            total_item = line.price_subtotal + igv_linea + icbper_linea
+            # Calcular precio unitario con impuestos
+            precio_unitario = line.price_total / line.quantity if line.quantity > 0 else line.price_unit
             
             item = {
                 "unidad_de_medida": self._get_sunat_uom_code(line.product_uom_id),
@@ -482,8 +422,7 @@ class AccountMove(models.Model):
                 "subtotal": round(line.price_subtotal, 2),
                 "tipo_de_igv": tipo_de_igv,
                 "igv": round(igv_linea, 2),
-                "total": round(total_item, 2),
-                "impuesto_bolsas": round(icbper_linea, 2),
+                "total": round(line.price_total, 2),
                 "anticipo_regularizacion": False,
                 "anticipo_documento_serie": "",
                 "anticipo_documento_numero": ""
@@ -534,9 +473,9 @@ class AccountMove(models.Model):
             "total_inafecta": round(total_inafecta, 2) if total_inafecta > 0 else "",
             "total_exonerada": round(total_exonerada, 2) if total_exonerada > 0 else "",
             "total_igv": round(total_igv, 2) if total_igv > 0 else "",
-            "total_gratuita": round(total_gratuita, 2) if total_gratuita > 0 else "",
+            "total_gratuita": "",
             "total_otros_cargos": "",
-            "total_impuestos_bolsas": round(total_icbper, 2),
+            "total_impuestos_bolsas": "",
             "total": round(total, 2),
             "percepcion_tipo": "",
             "percepcion_base_imponible": "",
