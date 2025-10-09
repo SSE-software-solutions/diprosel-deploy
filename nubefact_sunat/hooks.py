@@ -1,17 +1,18 @@
 # -*- coding: utf-8 -*-
 
 import logging
-from odoo import api, SUPERUSER_ID
 
 _logger = logging.getLogger(__name__)
 
 
-def post_init_hook(cr, registry):
+def post_init_hook(env):
     """
     Hook que se ejecuta después de instalar el módulo.
     Crea y configura los diarios de Factura y Boleta con las secuencias correctas.
+    
+    Args:
+        env: Environment de Odoo
     """
-    env = api.Environment(cr, SUPERUSER_ID, {})
     
     # Obtener todas las compañías peruanas
     companies = env['res.company'].search([])
