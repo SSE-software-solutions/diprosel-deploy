@@ -6,25 +6,7 @@
         <field name="model">nubefact.config</field>
         <field name="arch" type="xml">
             <form string="Configuración NubeFact">
-                <header>
-                    <button name="action_test_connection" 
-                            string="Probar Conexión" 
-                            type="object" 
-                            class="btn-primary"
-                            icon="fa-plug"/>
-                </header>
                 <sheet>
-                    <div class="oe_button_box" name="button_box">
-                        <button class="oe_stat_button" type="object" 
-                                name="action_test_connection" 
-                                icon="fa-check-circle">
-                            <field name="connection_status" widget="badge" 
-                                   decoration-success="connection_status == 'success'"
-                                   decoration-danger="connection_status == 'failed'"
-                                   decoration-info="connection_status == 'not_tested'"/>
-                        </button>
-                    </div>
-                    
                     <widget name="web_ribbon" title="Archivado" bg_color="text-bg-danger" 
                             invisible="active"/>
                     
@@ -39,6 +21,7 @@
                             <field name="ruc" placeholder="20XXXXXXXXX"/>
                             <field name="token" password="True" placeholder="Token proporcionado por NubeFact"/>
                             <field name="api_url" placeholder="https://api.nubefact.com/api/v1/tu-identificador"/>
+                            <field name="active" widget="boolean_toggle"/>
                         </group>
                         
                         <group string="Información">
@@ -47,16 +30,6 @@
                                 <p>La URL que ingreses determinará si es pruebas o producción.</p>
                             </div>
                         </group>
-                    </group>
-                    
-                    <group string="Estado de Conexión">
-                        <field name="last_connection_test" readonly="1"/>
-                        <field name="connection_message" readonly="1" 
-                               invisible="connection_status == 'not_tested'"/>
-                    </group>
-                    
-                    <group>
-                        <field name="active" widget="boolean_toggle"/>
                     </group>
                     
                     <notebook>
@@ -74,7 +47,7 @@
                                             </ul>
                                         </li>
                                         <li>Pegue su RUC, Token y URL en el formulario</li>
-                                        <li>Haga clic en "Probar Conexión" para verificar</li>
+                                        <li>Guarde la configuración y envíe su primera factura</li>
                                     </ol>
                                     <p><strong>Documentación:</strong> 
                                         <a href="https://docs.google.com/document/d/1QWWSILBbjd4MDkJl7vCkL2RZvkPh0IC7Wa67BvoYIhA" target="_blank">Manual API JSON</a> | 
@@ -98,10 +71,6 @@
                 <field name="company_id"/>
                 <field name="ruc"/>
                 <field name="api_url"/>
-                <field name="connection_status" 
-                       decoration-success="connection_status == 'success'"
-                       decoration-danger="connection_status == 'failed'"
-                       decoration-info="connection_status == 'not_tested'"/>
                 <field name="active"/>
             </list>
         </field>
