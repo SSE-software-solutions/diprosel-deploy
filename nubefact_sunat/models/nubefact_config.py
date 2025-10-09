@@ -137,41 +137,29 @@ class NubefactConfig(models.Model):
             
             # Analizar respuesta
             if response.status_code == 200:
-                # Conexión exitosa - NubeFact procesó la petición
-                # Puede responder con datos o con error "documento no existe"
+                # Conexión exitosa - Status 200 significa que NubeFact aceptó nuestras credenciales
+                # Puede responder con datos o con {"errors": "Documento no existe"}
                 # Ambos casos significan que el token y URL son correctos
+                
+                self.connection_status = 'success'
+                self.connection_message = 'Conexión exitosa con NubeFact. Token y URL verificados correctamente.'
+                
                 try:
                     response_data = response.json()
                     error_msg = response_data.get('errors', '')
                     
-                    # Si dice "documento no existe" o similar, es éxito (credenciales válidas)
-                    if 'no existe' in error_msg.lower() or 'not found' in error_msg.lower() or not error_msg:
-                        self.connection_status = 'success'
-                        self.connection_message = 'Conexión exitosa con NubeFact. Token y URL verificados correctamente.'
-                        
-                        return {
-                            'type': 'ir.actions.client',
-                            'tag': 'display_notification',
-                            'params': {
-                                'title': '✅ Conexión Exitosa',
-                                'message': 'Token y URL de NubeFact verificados correctamente. Ya puede enviar facturas a SUNAT.',
-                                'type': 'success',
-                                'sticky': False,
-                            }
-                        }
+                    # Si dice "documento no existe", es NORMAL en una prueba (credenciales válidas)
+                    if error_msg and 'no existe' in error_msg.lower():
+                        _logger.info("Prueba de conexión exitosa: NubeFact autenticó correctamente (documento de prueba no existe, como se esperaba)")
                 except:
                     pass
-                
-                # Si llegamos aquí, también es éxito (status 200 = autenticado)
-                self.connection_status = 'success'
-                self.connection_message = 'Conexión exitosa con NubeFact. Token y URL correctos.'
                 
                 return {
                     'type': 'ir.actions.client',
                     'tag': 'display_notification',
                     'params': {
                         'title': '✅ Conexión Exitosa',
-                        'message': 'Token y URL de NubeFact verificados correctamente. Ya puede enviar facturas a SUNAT.',
+                        'message': 'Credenciales verificadas correctamente. Token y URL son válidos. Ya puede enviar facturas a SUNAT.',
                         'type': 'success',
                         'sticky': False,
                     }
