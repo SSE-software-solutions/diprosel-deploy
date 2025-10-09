@@ -14,6 +14,12 @@ class AccountMove(models.Model):
     _inherit = 'account.move'
 
     # Campos de Facturación Electrónica
+    l10n_pe_edi_serie = fields.Char(
+        string='Serie Electrónica',
+        help='Serie para el comprobante electrónico (ej: F001, B001)',
+        copy=False
+    )
+    
     sunat_estado = fields.Selection([
         ('not_sent', 'No Enviado'),
         ('sent', 'Enviado a SUNAT'),
@@ -91,7 +97,7 @@ class AccountMove(models.Model):
         store=True
     )
     
-    @api.depends('name')
+    @api.depends('name', 'l10n_pe_edi_serie')
     def _compute_serie_numero(self):
         """Separa el número de factura en Serie y Número"""
         for record in self:
@@ -100,13 +106,57 @@ class AccountMove(models.Model):
                 parts = record.name.split('-')
                 if len(parts) >= 2:
                     record.serie_comprobante = parts[0]
-                    record.numero_comprobante = '-'.join(parts[1:])
+                    record.numero_comprobante = parts[1] if len(parts) == 2 else '-'.join(parts[1:])
+                elif record.l10n_pe_edi_serie:
+                    # Si hay serie configurada pero el name no tiene el formato
+                    record.serie_comprobante = record.l10n_pe_edi_serie
+                    record.numero_comprobante = record.name
                 else:
                     record.serie_comprobante = False
                     record.numero_comprobante = record.name
             else:
                 record.serie_comprobante = False
                 record.numero_comprobante = False
+    
+    def _get_starting_sequence(self):
+        """Override para usar secuencias peruanas según el tipo de cliente"""
+        self.ensure_one()
+        
+        # Solo aplicar para compañías peruanas
+        if self.company_id.country_code != 'PE':
+            return super()._get_starting_sequence()
+        
+        # Solo para facturas de cliente
+        if self.move_type not in ['out_invoice', 'out_refund']:
+            return super()._get_starting_sequence()
+        
+        # Determinar la serie según el tipo de documento del cliente
+        tipo_doc = self._get_tipo_documento_identidad(self.partner_id)
+        
+        if self.move_type == 'out_invoice':
+            # RUC = Factura, otros = Boleta
+            if tipo_doc == '6':  # RUC
+                sequence_code = 'account.move.invoice.pe'
+            else:
+                sequence_code = 'account.move.boleta.pe'
+        elif self.move_type == 'out_refund':
+            sequence_code = 'account.move.credit_note.pe'
+        else:
+            return super()._get_starting_sequence()
+        
+        # Buscar la secuencia
+        sequence = self.env['ir.sequence'].search([
+            ('code', '=', sequence_code),
+            ('company_id', 'in', [self.company_id.id, False])
+        ], limit=1)
+        
+        if sequence:
+            # Extraer la serie del prefix
+            if sequence.prefix:
+                self.l10n_pe_edi_serie = sequence.prefix.rstrip('-')
+            return sequence._get_current_sequence().prefix + '%(range_year)s' if sequence.use_date_range else sequence._get_current_sequence().prefix
+        
+        return super()._get_starting_sequence()
     
     def _get_tipo_documento_identidad(self, partner):
         """Mapea el tipo de documento de identidad para SUNAT"""
@@ -200,12 +250,26 @@ class AccountMove(models.Model):
         moneda_map = {'PEN': 1, 'USD': 2, 'EUR': 3}
         moneda = moneda_map.get(self.currency_id.name, 1) if self.currency_id else 1
         
+        # Validar serie y número
+        if not self.serie_comprobante:
+            raise UserError(_('No se pudo determinar la serie del comprobante. Verifique la configuración de secuencias.'))
+        
+        if not self.numero_comprobante:
+            raise UserError(_('No se pudo determinar el número del comprobante.'))
+        
+        # Limpiar el número de comprobante (remover ceros a la izquierda si es necesario)
+        numero_limpio = self.numero_comprobante.lstrip('0') or '1'
+        try:
+            numero = int(numero_limpio)
+        except ValueError:
+            raise UserError(_('El número de comprobante "%s" no es válido. Debe ser numérico.') % self.numero_comprobante)
+        
         # Estructura de datos según documentación oficial de NubeFact
         data = {
             "operacion": "generar_comprobante",
             "tipo_de_comprobante": self._get_tipo_comprobante(),
-            "serie": self.serie_comprobante or "F001",
-            "numero": int(self.numero_comprobante) if self.numero_comprobante and self.numero_comprobante.isdigit() else 1,
+            "serie": self.serie_comprobante,
+            "numero": numero,
             "sunat_transaction": 1,  # 1 = Venta interna
             "cliente_tipo_de_documento": self._get_tipo_documento_identidad(self.partner_id),
             "cliente_numero_de_documento": self.partner_id.vat,
@@ -405,12 +469,26 @@ class AccountMove(models.Model):
             raise UserError(_('No se ha configurado la conexión con NubeFact.'))
         
         try:
+            # Validar serie y número
+            if not self.serie_comprobante:
+                raise UserError(_('No se pudo determinar la serie del comprobante.'))
+            
+            if not self.numero_comprobante:
+                raise UserError(_('No se pudo determinar el número del comprobante.'))
+            
+            # Limpiar el número de comprobante
+            numero_limpio = self.numero_comprobante.lstrip('0') or '1'
+            try:
+                numero = int(numero_limpio)
+            except ValueError:
+                raise UserError(_('El número de comprobante "%s" no es válido.') % self.numero_comprobante)
+            
             # Preparar datos de consulta según documentación
             consulta_data = {
                 "operacion": "consultar_comprobante",
                 "tipo_de_comprobante": self._get_tipo_comprobante(),
-                "serie": self.serie_comprobante or "F001",
-                "numero": int(self.numero_comprobante) if self.numero_comprobante and self.numero_comprobante.isdigit() else 1
+                "serie": self.serie_comprobante,
+                "numero": numero
             }
             
             # URL de la API de NubeFact

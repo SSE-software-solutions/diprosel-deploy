@@ -22,6 +22,8 @@
     'depends': ['account'],
     'data': [
         'security/ir.model.access.csv',
+        'data/ir_sequence_data.xml',
+        'views/ir_sequence_views.xml',
         'views/nubefact_config_views.xml',
         'views/account_move_views.xml',
     ],

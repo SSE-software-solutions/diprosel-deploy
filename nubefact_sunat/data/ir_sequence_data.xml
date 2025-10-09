@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <data noupdate="1">
+        
+        <!-- Secuencia para Facturas Electrónicas -->
+        <record id="sequence_invoice_pe" model="ir.sequence">
+            <field name="name">Facturas Electrónicas PE</field>
+            <field name="code">account.move.invoice.pe</field>
+            <field name="prefix">F001-</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+            <field name="number_next">1</field>
+            <field name="implementation">standard</field>
+        </record>
+
+        <!-- Secuencia para Boletas de Venta -->
+        <record id="sequence_boleta_pe" model="ir.sequence">
+            <field name="name">Boletas de Venta PE</field>
+            <field name="code">account.move.boleta.pe</field>
+            <field name="prefix">B001-</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+            <field name="number_next">1</field>
+            <field name="implementation">standard</field>
+        </record>
+
+        <!-- Secuencia para Notas de Crédito -->
+        <record id="sequence_credit_note_pe" model="ir.sequence">
+            <field name="name">Notas de Crédito PE</field>
+            <field name="code">account.move.credit_note.pe</field>
+            <field name="prefix">FC01-</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+            <field name="number_next">1</field>
+            <field name="implementation">standard</field>
+        </record>
+
+        <!-- Secuencia para Notas de Débito -->
+        <record id="sequence_debit_note_pe" model="ir.sequence">
+            <field name="name">Notas de Débito PE</field>
+            <field name="code">account.move.debit_note.pe</field>
+            <field name="prefix">FD01-</field>
+            <field name="padding">6</field>
+            <field name="number_increment">1</field>
+            <field name="number_next">1</field>
+            <field name="implementation">standard</field>
+        </record>
+
+    </data>
+</odoo>
+

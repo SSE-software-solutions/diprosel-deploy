@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    
+    <!-- Vista de formulario para secuencias de documentos electrónicos -->
+    <record id="view_sequence_form_pe" model="ir.ui.view">
+        <field name="name">ir.sequence.form.pe</field>
+        <field name="model">ir.sequence</field>
+        <field name="inherit_id" ref="base.sequence_view"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='code']" position="after">
+                <field name="l10n_pe_is_edi" invisible="1"/>
+            </xpath>
+        </field>
+    </record>
+
+    <!-- Vista de árbol para secuencias PE -->
+    <record id="view_sequence_tree_pe" model="ir.ui.view">
+        <field name="name">ir.sequence.tree.pe</field>
+        <field name="model">ir.sequence</field>
+        <field name="arch" type="xml">
+            <tree string="Secuencias de Documentos Electrónicos">
+                <field name="name"/>
+                <field name="code"/>
+                <field name="prefix"/>
+                <field name="padding"/>
+                <field name="number_next_actual"/>
+                <field name="company_id" groups="base.group_multi_company"/>
+            </tree>
+        </field>
+    </record>
+
+    <!-- Acción para ver secuencias de documentos electrónicos -->
+    <record id="action_sequence_pe_edi" model="ir.actions.act_window">
+        <field name="name">Series de Documentos Electrónicos</field>
+        <field name="res_model">ir.sequence</field>
+        <field name="view_mode">tree,form</field>
+        <field name="domain">[('code', 'in', ['account.move.invoice.pe', 'account.move.boleta.pe', 'account.move.credit_note.pe', 'account.move.debit_note.pe'])]</field>
+        <field name="context">{'default_implementation': 'standard'}</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Configurar Series de Documentos Electrónicos
+            </p>
+            <p>
+                Las series deben seguir el formato SUNAT:
+                <ul>
+                    <li><b>Facturas:</b> F001, F002, etc.</li>
+                    <li><b>Boletas:</b> B001, B002, etc.</li>
+                    <li><b>Notas de Crédito:</b> FC01, BC01, etc.</li>
+                    <li><b>Notas de Débito:</b> FD01, BD01, etc.</li>
+                </ul>
+            </p>
+        </field>
+    </record>
+
+    <!-- Menú para configuración de series -->
+    <menuitem
+        id="menu_nubefact_series"
+        name="Series Electrónicas"
+        parent="account.menu_finance_configuration"
+        action="action_sequence_pe_edi"
+        sequence="50"/>
+
+</odoo>
+
