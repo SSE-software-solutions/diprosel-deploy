@@ -119,32 +119,64 @@ class AccountMove(models.Model):
                 record.serie_comprobante = False
                 record.numero_comprobante = False
     
-    def _fix_sequence_padding(self, journal):
-        """Ajusta el padding de las secuencias del diario a 6 dígitos"""
-        if not journal:
-            return
+    def _get_or_create_pe_sequence(self, journal, tipo_doc):
+        """Obtiene o crea la secuencia correcta para facturas/boletas peruanas"""
+        if tipo_doc == '6':  # RUC - Factura
+            # Buscar la secuencia de facturas del módulo
+            sequence = self.env['ir.sequence'].search([
+                ('code', '=', 'account.move.invoice.pe'),
+                ('company_id', '=', self.env.company.id)
+            ], limit=1)
+            
+            if not sequence:
+                # Si no existe, buscar por nombre
+                sequence = self.env.ref('nubefact_sunat.sequence_invoice_pe', raise_if_not_found=False)
+            
+            if not sequence:
+                # Crear secuencia de facturas si no existe
+                sequence = self.env['ir.sequence'].sudo().create({
+                    'name': 'Facturas Electrónicas PE',
+                    'code': 'account.move.invoice.pe',
+                    'prefix': 'F001-',
+                    'padding': 6,
+                    'number_increment': 1,
+                    'number_next': 1,
+                    'implementation': 'standard',
+                    'company_id': self.env.company.id,
+                })
+                _logger.info(f"✅ Secuencia de Facturas PE creada: {sequence.name}")
+        else:  # DNI u otros - Boleta
+            # Buscar la secuencia de boletas del módulo
+            sequence = self.env['ir.sequence'].search([
+                ('code', '=', 'account.move.boleta.pe'),
+                ('company_id', '=', self.env.company.id)
+            ], limit=1)
+            
+            if not sequence:
+                # Si no existe, buscar por nombre
+                sequence = self.env.ref('nubefact_sunat.sequence_boleta_pe', raise_if_not_found=False)
+            
+            if not sequence:
+                # Crear secuencia de boletas si no existe
+                sequence = self.env['ir.sequence'].sudo().create({
+                    'name': 'Boletas de Venta PE',
+                    'code': 'account.move.boleta.pe',
+                    'prefix': 'B001-',
+                    'padding': 6,
+                    'number_increment': 1,
+                    'number_next': 1,
+                    'implementation': 'standard',
+                    'company_id': self.env.company.id,
+                })
+                _logger.info(f"✅ Secuencia de Boletas PE creada: {sequence.name}")
         
-        # Buscar secuencias relacionadas con el diario
-        sequences = self.env['ir.sequence'].search([
-            '|', '|',
-            ('name', 'ilike', journal.code),
-            ('prefix', 'like', f'{journal.code}%'),
-            ('code', 'like', f'{journal.code}%'),
-        ])
-        
-        for seq in sequences:
-            if seq.padding != 6:
-                try:
-                    seq.sudo().write({'padding': 6})
-                    _logger.info(f"✅ Secuencia {seq.name} ajustada a padding de 6 dígitos")
-                except Exception as e:
-                    _logger.warning(f"No se pudo ajustar secuencia {seq.name}: {e}")
+        return sequence
     
     @api.model_create_multi
     def create(self, vals_list):
         """Override para asignar el diario correcto según el tipo de cliente"""
         for vals in vals_list:
-            # Solo aplicar para facturas de venta nuevas sin diario específico
+            # Solo aplicar para facturas de venta nuevas
             if vals.get('move_type') in ['out_invoice', 'out_refund'] and vals.get('partner_id'):
                 # Obtener el partner
                 partner = self.env['res.partner'].browse(vals['partner_id'])
@@ -171,8 +203,19 @@ class AccountMove(models.Model):
                         
                         if journal:
                             vals['journal_id'] = journal.id
-                            # Ajustar padding de secuencias al primer uso
-                            self._fix_sequence_padding(journal)
+                    
+                    # Asignar la secuencia correcta del módulo nubefact
+                    # Obtener el diario (ya sea del vals o el que acabamos de asignar)
+                    journal_id = vals.get('journal_id')
+                    if journal_id:
+                        journal = self.env['account.journal'].browse(journal_id)
+                        # Obtener o crear la secuencia correcta
+                        sequence = self._get_or_create_pe_sequence(journal, tipo_doc)
+                        
+                        # Asignar la secuencia al diario si no la tiene
+                        if journal.sequence_id != sequence:
+                            journal.sudo().write({'sequence_id': sequence.id})
+                            _logger.info(f"✅ Diario {journal.name} actualizado con secuencia {sequence.name}")
         
         return super().create(vals_list)
     
